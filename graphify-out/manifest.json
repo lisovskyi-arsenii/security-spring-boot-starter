@@ -1,0 +1,127 @@
+{
+  "build.gradle.kts": {
+    "mtime": 1785096039.246506,
+    "ast_hash": "697864bf7ca290137a403ce13dded4ad",
+    "semantic_hash": ""
+  },
+  "gradlew": {
+    "mtime": 1784380197.3233104,
+    "ast_hash": "48fe0bd77a66bbb62c1150926ab1332c",
+    "semantic_hash": "48fe0bd77a66bbb62c1150926ab1332c"
+  },
+  "security-starter-autoconfigure/build.gradle.kts": {
+    "mtime": 1785095916.637725,
+    "ast_hash": "e367977b2bb449ea63b51a5dc7bdb271",
+    "semantic_hash": ""
+  },
+  "security-starter-autoconfigure/src/main/java/com/lisovskyi/security/autoconfigure/SecurityAutoConfiguration.java": {
+    "mtime": 1785096823.156139,
+    "ast_hash": "b67385861826636cd95d7729a9de1ac4",
+    "semantic_hash": ""
+  },
+  "security-starter-autoconfigure/src/main/java/com/lisovskyi/security/autoconfigure/cookie/CookieService.java": {
+    "mtime": 1784402286.5931058,
+    "ast_hash": "fcb2cd1d3e9721eebdf9fe2f96159a8d",
+    "semantic_hash": "fcb2cd1d3e9721eebdf9fe2f96159a8d"
+  },
+  "security-starter-autoconfigure/src/main/java/com/lisovskyi/security/autoconfigure/cookie/CsrfCookieFilter.java": {
+    "mtime": 1784406051.3220074,
+    "ast_hash": "95c6c3a2bc741222e498db628cbd1763",
+    "semantic_hash": "95c6c3a2bc741222e498db628cbd1763"
+  },
+  "security-starter-autoconfigure/src/main/java/com/lisovskyi/security/autoconfigure/security/DefaultSecurityAutoConfiguration.java": {
+    "mtime": 1785094469.523,
+    "ast_hash": "47d6ec2fdfa5f7a333af3e118691e555",
+    "semantic_hash": ""
+  },
+  "security-starter-autoconfigure/src/main/java/com/lisovskyi/security/autoconfigure/security/jwt/InMemoryJwtBlacklistService.java": {
+    "mtime": 1785090891.671,
+    "ast_hash": "4b94600c880474b526ef9a3dd4af988a",
+    "semantic_hash": ""
+  },
+  "security-starter-autoconfigure/src/main/java/com/lisovskyi/security/autoconfigure/security/jwt/JwtAuthFilter.java": {
+    "mtime": 1785092118.698,
+    "ast_hash": "c4a2110cee3604e18bc1fec718c243c8",
+    "semantic_hash": ""
+  },
+  "security-starter-autoconfigure/src/main/java/com/lisovskyi/security/autoconfigure/security/jwt/JwtService.java": {
+    "mtime": 1785093878.284,
+    "ast_hash": "9d0cbb8fe7c053141f8f839857f91755",
+    "semantic_hash": ""
+  },
+  "security-starter-autoconfigure/src/main/java/com/lisovskyi/security/autoconfigure/security/jwt/RedisJwtBlacklistService.java": {
+    "mtime": 1785090762.622,
+    "ast_hash": "819a3942c7b109c76d34454e9dcfe8de",
+    "semantic_hash": ""
+  },
+  "security-starter-core/build.gradle.kts": {
+    "mtime": 1785095916.6372118,
+    "ast_hash": "731b87620aec7c8ac0582f55d0d516d5",
+    "semantic_hash": ""
+  },
+  "settings.gradle.kts": {
+    "mtime": 1784380789.4146502,
+    "ast_hash": "738f2c09db7f64eb3571c7aa0c8e7987",
+    "semantic_hash": "738f2c09db7f64eb3571c7aa0c8e7987"
+  },
+  ".agents/rules/graphify.md": {
+    "mtime": 1785090360.146845,
+    "ast_hash": "a0e4d192b9e2e17256124dbfc8e24e6a",
+    "semantic_hash": ""
+  },
+  ".agents/workflows/graphify.md": {
+    "mtime": 1785090360.1479003,
+    "ast_hash": "637776aa6f7496d069afe7520c845c8a",
+    "semantic_hash": ""
+  },
+  "security-starter-autoconfigure/src/main/java/com/lisovskyi/security/autoconfigure/security/SecurityMdcFilter.java": {
+    "mtime": 1785094056.29,
+    "ast_hash": "a907df3c0175abce7a87d868130e0b93",
+    "semantic_hash": ""
+  },
+  "security-starter-core/src/main/java/com/lisovskyi/security/autoconfigure/cookie/CookieProperties.java": {
+    "mtime": 1785095952.4608278,
+    "ast_hash": "512ce83d20ae53ba39e4edec25fa78ba",
+    "semantic_hash": ""
+  },
+  "security-starter-core/src/main/java/com/lisovskyi/security/autoconfigure/security/SecurityFilterChainCustomizer.java": {
+    "mtime": 1785095301.0034542,
+    "ast_hash": "806c015ffbb17ed8c3dc2f25b8ca8bf4",
+    "semantic_hash": ""
+  },
+  "security-starter-core/src/main/java/com/lisovskyi/security/autoconfigure/security/SecurityPrincipal.java": {
+    "mtime": 1785095286.7918818,
+    "ast_hash": "37ddc90a63b08253cf8a3cb42194b712",
+    "semantic_hash": ""
+  },
+  "security-starter-core/src/main/java/com/lisovskyi/security/autoconfigure/security/SecurityProperties.java": {
+    "mtime": 1785095308.521907,
+    "ast_hash": "9901b55778e4b5773b110b445aeba133",
+    "semantic_hash": ""
+  },
+  "security-starter-core/src/main/java/com/lisovskyi/security/autoconfigure/security/SecurityUtils.java": {
+    "mtime": 1785095297.3349428,
+    "ast_hash": "21981b785f8ef4ede8fe9fe04827259c",
+    "semantic_hash": ""
+  },
+  "security-starter-core/src/main/java/com/lisovskyi/security/autoconfigure/security/UserByIdDetailsService.java": {
+    "mtime": 1785095290.080823,
+    "ast_hash": "6ea7395d03dcef5a37fc809440509fab",
+    "semantic_hash": ""
+  },
+  "security-starter-core/src/main/java/com/lisovskyi/security/autoconfigure/security/annotation/CurrentUser.java": {
+    "mtime": 1785095304.6641855,
+    "ast_hash": "b69e5dec58ce8077563f96bc1e04a8f9",
+    "semantic_hash": ""
+  },
+  "security-starter-core/src/main/java/com/lisovskyi/security/autoconfigure/security/jwt/JwtBlacklistService.java": {
+    "mtime": 1785095293.5511148,
+    "ast_hash": "69ebe68fc8b42f64f84a9f0fe9dfd3e1",
+    "semantic_hash": ""
+  },
+  "security-starter-core/src/main/java/com/lisovskyi/security/autoconfigure/security/jwt/JwtProperties.java": {
+    "mtime": 1785095312.28607,
+    "ast_hash": "c269ec8c53a81ff85aff9c50dd929057",
+    "semantic_hash": ""
+  }
+}
