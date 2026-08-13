@@ -52,7 +52,7 @@ publishing {
             from(components["java"])
             groupId = "com.lisovskyi"
             artifactId = "security-starter-autoconfigure"
-            version = "0.1.2"
+            version = "0.2.0"
         }
     }
 
