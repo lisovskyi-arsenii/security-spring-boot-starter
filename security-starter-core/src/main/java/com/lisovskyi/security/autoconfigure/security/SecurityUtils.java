@@ -20,7 +20,7 @@ public final class SecurityUtils {
                 .map(SecurityPrincipal.class::cast);
     }
 
-    public static Optional<String> getCurrentUserId() {
-        return getCurrentPrincipal().map(p -> p.getId().toString());
+    public static Optional<Long> getCurrentUserId() {
+        return getCurrentPrincipal().map(SecurityPrincipal::getId);
     }
 }

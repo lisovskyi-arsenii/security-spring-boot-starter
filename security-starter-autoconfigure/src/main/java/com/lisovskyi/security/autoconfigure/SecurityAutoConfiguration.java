@@ -30,6 +30,12 @@ public class SecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    public OpaqueTokenService opaqueTokenService() {
+        return new OpaqueTokenService();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     public CookieService cookieService(CookieProperties cookieProperties) {
         return new CookieService(cookieProperties);
     }

@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface SecurityPrincipal extends UserDetails {
 
-    Object getId();
+    Long getId();
 
     /**
      * Returns the role of this principal. May be provided with or without

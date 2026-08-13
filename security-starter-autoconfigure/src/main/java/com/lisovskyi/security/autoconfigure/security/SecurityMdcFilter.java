@@ -29,7 +29,7 @@ public class SecurityMdcFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         try {
-            SecurityUtils.getCurrentUserId().ifPresent(id -> MDC.put(USER_ID_MDC_KEY, id));
+            SecurityUtils.getCurrentUserId().ifPresent(id -> MDC.put(USER_ID_MDC_KEY, id.toString()));
             MDC.put(CLIENT_IP_MDC_KEY, extractClientIp(request));
             filterChain.doFilter(request, response);
         } finally {

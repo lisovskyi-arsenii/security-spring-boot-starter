@@ -65,10 +65,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 throw new CredentialsExpiredException("JWT is blacklisted");
             }
 
+            if (!jwtService.isTokenValid(jwt)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             final String userIdStr = jwtService.extractSubject(jwt);
 
             if (userIdStr != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                authenticateUser(request, jwt, userIdStr);
+                final long userId = Long.parseLong(userIdStr);
+                authenticateUser(request, jwt, userId);
             }
 
             filterChain.doFilter(request, response);
@@ -98,17 +104,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private void authenticateUser(HttpServletRequest request, String jwt, String userId) {
+    private void authenticateUser(HttpServletRequest request, String jwt, Long userId) {
         UserDetails userDetails = userDetailsService.loadUserById(userId);
 
-        if (jwtService.isTokenValid(jwt)) {
-            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                    userDetails,
-                    null,
-                    userDetails.getAuthorities()
-            );
-            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authToken);
-        }
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.getAuthorities()
+        );
+        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authToken);
     }
 }

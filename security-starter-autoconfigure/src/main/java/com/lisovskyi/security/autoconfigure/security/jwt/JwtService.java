@@ -43,17 +43,6 @@ public class JwtService {
         return generateToken(claims, securityPrincipal, jwtProperties.getAccessTokenExpiration());
     }
 
-    public String generateRefreshToken(SecurityPrincipal securityPrincipal) {
-        Instant now = Instant.now();
-        return Jwts.builder()
-                .subject(securityPrincipal.getId().toString())
-                .issuer(jwtProperties.getIssuer())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusMillis(jwtProperties.getRefreshTokenExpiration())))
-                .signWith(cachedSigningKey)
-                .compact();
-    }
-
     public boolean isTokenValid(String token, SecurityPrincipal securityPrincipal) {
         try {
             final String subjectId = extractSubject(token);

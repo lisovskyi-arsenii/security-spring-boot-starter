@@ -8,7 +8,7 @@ subprojects {
     plugins.apply("java-library")
     plugins.apply("io.spring.dependency-management")
     group = "com.lisovskyi"
-    version = "0.1.2"
+    version = "0.2.0"
 
     tasks.withType<JavaCompile> {
         sourceCompatibility = "25"
@@ -47,15 +47,23 @@ java {
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
+        create<MavenPublication>("mavenJava") {
             from(components["java"])
             groupId = "com.lisovskyi"
             artifactId = "lisovskyi-security-starter"
-            version = "0.1.2"
+            version = "0.2.0"
         }
     }
 
     repositories {
         mavenLocal()
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Sentio1/backend-java")
+            credentials {
+                username = findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR") ?: ""
+                password = findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN") ?: ""
+            }
+        }
     }
 }
