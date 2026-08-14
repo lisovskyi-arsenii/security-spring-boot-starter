@@ -52,11 +52,19 @@ publishing {
             from(components["java"])
             groupId = "com.lisovskyi"
             artifactId = "security-starter-autoconfigure"
-            version = "0.2.0"
+            version = "0.2.1"
         }
     }
 
     repositories {
         mavenLocal()
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Sentio1/backend-java")
+            credentials {
+                username = findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR") ?: ""
+                password = findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN") ?: ""
+            }
+        }
     }
 }

@@ -8,7 +8,7 @@ subprojects {
     plugins.apply("java-library")
     plugins.apply("io.spring.dependency-management")
     group = "com.lisovskyi"
-    version = "0.2.0"
+    version = "0.2.1"
 
     tasks.withType<JavaCompile> {
         sourceCompatibility = "25"
@@ -51,7 +51,7 @@ publishing {
             from(components["java"])
             groupId = "com.lisovskyi"
             artifactId = "lisovskyi-security-starter"
-            version = "0.2.0"
+            version = "0.2.1"
         }
     }
 
