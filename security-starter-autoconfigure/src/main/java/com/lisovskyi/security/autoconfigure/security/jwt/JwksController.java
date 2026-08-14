@@ -1,5 +1,6 @@
 package com.lisovskyi.security.autoconfigure.security.jwt;
 
+import io.jsonwebtoken.security.JwkSetBuilder;
 import io.jsonwebtoken.security.Jwks;
 import io.jsonwebtoken.security.RsaPublicJwk;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,16 @@ public class JwksController {
                 .id(jwtService.getKeyId())
                 .build();
 
-        return Jwks.set().add(jwk).build();
+        JwkSetBuilder jwkSetBuilder = Jwks.set();
+        jwkSetBuilder.add(jwk);
+        if (jwtService.getPreviousPublicKey() != null) {
+            RsaPublicJwk previousJwk = Jwks.builder()
+                    .key(jwtService.getPreviousPublicKey())
+                    .id(jwtService.getPreviousKeyId())
+                    .build();
+            jwkSetBuilder.add(previousJwk);
+        }
+
+        return jwkSetBuilder.build();
     }
 }

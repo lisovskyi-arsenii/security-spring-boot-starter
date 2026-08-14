@@ -1,13 +1,13 @@
 package com.lisovskyi.security.autoconfigure.security.jwt;
 
 import com.lisovskyi.security.autoconfigure.security.SecurityPrincipal;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Jwks;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.security.Key;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPrivateCrtKey;
@@ -26,7 +26,10 @@ public class JwtService {
     private final JwtProperties jwtProperties;
     private final PrivateKey privateKey;
     @Getter private final RSAPublicKey publicKey;
+    private final PrivateKey previousPrivateKey;
+    @Getter private final RSAPublicKey previousPublicKey;
     @Getter private final String keyId;
+    @Getter private final String previousKeyId;
 
     /**
      * Decodes and caches the signing key at construction time, so every
@@ -36,7 +39,10 @@ public class JwtService {
         this.jwtProperties = jwtProperties;
         this.privateKey = decodePrivateKey(jwtProperties.getPrivateKey());
         this.publicKey = derivePublicKey((RSAPrivateCrtKey) this.privateKey);
+        this.previousPrivateKey = jwtProperties.getPreviousPrivateKey() != null ? decodePrivateKey(jwtProperties.getPreviousPrivateKey()) : null;
+        this.previousPublicKey = previousPrivateKey != null ? derivePublicKey((RSAPrivateCrtKey) previousPrivateKey) : null;
         this.keyId = Jwks.builder().key(this.publicKey).idFromThumbprint().build().getId();
+        this.previousKeyId = previousPublicKey != null ? Jwks.builder().key(previousPublicKey).idFromThumbprint().build().getId() : null;
     }
 
     public String extractSubject(String token) {
@@ -46,7 +52,7 @@ public class JwtService {
     public boolean isTokenValid(String token, SecurityPrincipal securityPrincipal) {
         try {
             final String subjectId = extractSubject(token);
-            return (subjectId.equals(securityPrincipal.getId().toString()) && isTokenExpired(token));
+            return (subjectId.equals(securityPrincipal.getId().toString()) && !isTokenExpired(token));
         } catch (Exception e) {
             log.debug("Token validation failed for principal {}: {}", securityPrincipal.getId(), e.getMessage());
             return false;
@@ -56,7 +62,7 @@ public class JwtService {
     public boolean isTokenValid(String token) {
         try {
             extractAllClaims(token);
-            return isTokenExpired(token);
+            return !isTokenExpired(token);
         } catch (Exception e) {
             log.debug("Token validation failed: {}", e.getMessage());
             return false;
@@ -89,7 +95,7 @@ public class JwtService {
     }
 
     private boolean isTokenExpired(String token) {
-        return !extractExpiration(token).isBefore(Instant.now());
+        return extractExpiration(token).isBefore(Instant.now());
     }
 
     public Instant extractExpiration(String token) {
@@ -98,7 +104,15 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .verifyWith(publicKey)
+                .keyLocator(new LocatorAdapter<Key>() {
+                    @Override
+                    protected Key locate(JwsHeader header) {
+                        String kid = header.getKeyId();
+                        if (keyId.equals(kid)) return publicKey;
+                        if (previousKeyId != null && previousKeyId.equals(kid)) return previousPublicKey;
+                        return null;
+                    }
+                })
                 .requireIssuer(jwtProperties.getIssuer())
                 .build()
                 .parseSignedClaims(token)
