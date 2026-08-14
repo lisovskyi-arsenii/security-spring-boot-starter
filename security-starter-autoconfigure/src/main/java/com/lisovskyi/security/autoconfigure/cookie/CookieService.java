@@ -1,10 +1,14 @@
 package com.lisovskyi.security.autoconfigure.cookie;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+
+import java.util.Optional;
 
 @RequiredArgsConstructor
 public class CookieService {
@@ -12,6 +16,14 @@ public class CookieService {
 
     @Value("${server.servlet.context-path:}")
     private String contextPath;
+
+    public Optional<String> getAccessTokenCookie(HttpServletRequest request) {
+        return getCookieValue(request, cookieProperties.getAccessTokenName());
+    }
+
+    public Optional<String> getRefreshTokenCookie(HttpServletRequest request) {
+        return getCookieValue(request, cookieProperties.getRefreshTokenName());
+    }
 
     public void setAccessTokenCookie(HttpServletResponse response, String accessToken) {
         String path = buildFullPath(cookieProperties.getAccessTokenPath());
@@ -82,5 +94,16 @@ public class CookieService {
         String path = partialPath.startsWith("/") ? partialPath : "/" + partialPath;
 
         return base + path;
+    }
+
+    private Optional<String> getCookieValue(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+        for (Cookie cookie : cookies) {
+            if (cookie.getName().equals(name)) {
+                return Optional.of(cookie.getValue());
+            }
+        }
+
+        return Optional.empty();
     }
 }

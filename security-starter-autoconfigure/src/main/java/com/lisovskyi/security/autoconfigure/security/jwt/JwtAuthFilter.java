@@ -1,10 +1,9 @@
 package com.lisovskyi.security.autoconfigure.security.jwt;
 
-import com.lisovskyi.security.autoconfigure.cookie.CookieProperties;
+import com.lisovskyi.security.autoconfigure.cookie.CookieService;
 import com.lisovskyi.security.autoconfigure.security.UserByIdDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
@@ -24,23 +23,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final CookieService cookieService;
     private final UserByIdDetailsService userDetailsService;
     private final JwtBlacklistService jwtBlacklistService;
     private final HandlerExceptionResolver exceptionResolver;
-    private final CookieProperties cookieProperties;
+
 
     public JwtAuthFilter(
             JwtService jwtService,
+            CookieService cookieService,
             UserByIdDetailsService userDetailsService,
             JwtBlacklistService jwtBlacklistService,
-            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver,
-            CookieProperties cookieProperties
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver
     ) {
         this.jwtService = jwtService;
+        this.cookieService = cookieService;
         this.userDetailsService = userDetailsService;
         this.jwtBlacklistService = jwtBlacklistService;
         this.exceptionResolver = handlerExceptionResolver;
-        this.cookieProperties = cookieProperties;
     }
 
     @Override
@@ -53,7 +53,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String jwt = extractTokenFromHeader(request);
 
             if (jwt == null) {
-                jwt = extractTokenFromCookie(request);
+                jwt = cookieService.getAccessTokenCookie(request)
+                        .orElse(null);
             }
 
             if (jwt == null || jwt.isBlank()) {
@@ -88,18 +89,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader(AUTHORIZATION_HEADER);
         if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
             return authHeader.substring(BEARER_PREFIX.length());
-        }
-        return null;
-    }
-
-    private String extractTokenFromCookie(HttpServletRequest request) {
-        final Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookieProperties.getAccessTokenName().equals(cookie.getName())) {
-                    return cookie.getValue();
-                }
-            }
         }
         return null;
     }

@@ -60,12 +60,12 @@ public class SecurityAutoConfiguration {
     @ConditionalOnBean(UserByIdDetailsService.class)
     public JwtAuthFilter jwtAuthFilter(
             JwtService jwtService,
+            CookieService cookieService,
             UserByIdDetailsService userDetailsService,
             JwtBlacklistService jwtBlacklistService,
-            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver,
-            CookieProperties cookieProperties
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver
     ) {
-        return new JwtAuthFilter(jwtService, userDetailsService, jwtBlacklistService, handlerExceptionResolver, cookieProperties);
+        return new JwtAuthFilter(jwtService, cookieService, userDetailsService, jwtBlacklistService, handlerExceptionResolver);
     }
 
     @Bean
