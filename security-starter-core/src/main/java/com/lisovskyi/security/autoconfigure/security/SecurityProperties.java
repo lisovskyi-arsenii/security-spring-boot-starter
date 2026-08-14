@@ -28,6 +28,13 @@ public class SecurityProperties {
     private List<String> publicPaths = new ArrayList<>();
     private boolean includeDefaultPublicPaths = true;
     private boolean allowCredentials = false;
+    
+    /**
+     * Strength (log rounds) to use for BCryptPasswordEncoder.
+     * If not set or set to -1, the default value (10) will be used.
+     * Must be between 4 and 31.
+     */
+    private Integer bcryptStrength;
 
     public List<String> getPublicPaths() {
         Set<String> combined = new LinkedHashSet<>();

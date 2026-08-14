@@ -127,6 +127,10 @@ public class DefaultSecurityAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public PasswordEncoder passwordEncoder() {
+        Integer strength = securityProperties.getBcryptStrength();
+        if (strength != null && strength >= 4 && strength <= 31) {
+            return new BCryptPasswordEncoder(strength);
+        }
         return new BCryptPasswordEncoder();
     }
 

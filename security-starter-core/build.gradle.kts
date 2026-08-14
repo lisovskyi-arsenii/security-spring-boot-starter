@@ -41,7 +41,6 @@ publishing {
             from(components["java"])
             groupId = "com.lisovskyi"
             artifactId = "security-starter-core"
-            version = "0.2.1"
         }
     }
 
