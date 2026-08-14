@@ -98,6 +98,10 @@ public class CookieService {
 
     private Optional<String> getCookieValue(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return Optional.empty();
+        }
+
         for (Cookie cookie : cookies) {
             if (cookie.getName().equals(name)) {
                 return Optional.of(cookie.getValue());
