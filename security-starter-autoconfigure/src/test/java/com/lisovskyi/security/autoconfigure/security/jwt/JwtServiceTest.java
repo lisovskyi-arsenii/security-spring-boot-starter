@@ -98,4 +98,46 @@ class JwtServiceTest {
 
         assertThat(serviceB.isTokenValid(tokenFromA)).isFalse();
     }
+
+    // ---- previous-private-key edge cases -------------------------------
+    //
+    // A blank previous-private-key is not a hypothetical: Doppler/k8s secret
+    // templating can easily produce an empty string instead of an absent key
+    // when a rotation isn't in progress. That must not be treated as "a
+    // previous key is configured" - the constructor should just ignore it,
+    // not try to decode zero bytes as an RSA key and blow up bean creation.
+
+    @Test
+    void nullPreviousPrivateKey_isTreatedAsNotConfigured() {
+        JwtService service = new JwtService(propertiesFor(keyA, null));
+
+        assertThat(service.getPreviousPublicKey()).isNull();
+        assertThat(service.getPreviousKeyId()).isNull();
+    }
+
+    @Test
+    void emptyPreviousPrivateKey_isTreatedAsNotConfigured() {
+        JwtService service = new JwtService(propertiesFor(keyA, ""));
+
+        assertThat(service.getPreviousPublicKey()).isNull();
+        assertThat(service.getPreviousKeyId()).isNull();
+    }
+
+    @Test
+    void blankPreviousPrivateKey_isTreatedAsNotConfigured() {
+        JwtService service = new JwtService(propertiesFor(keyA, "   "));
+
+        assertThat(service.getPreviousPublicKey()).isNull();
+        assertThat(service.getPreviousKeyId()).isNull();
+    }
+
+    @Test
+    void presentPreviousPrivateKey_isActuallyDecodedAndExposed() {
+        JwtService service = new JwtService(propertiesFor(keyB, keyA));
+
+        assertThat(service.getPreviousPublicKey()).isNotNull();
+        assertThat(service.getPreviousKeyId())
+                .isNotNull()
+                .isNotEqualTo(service.getKeyId());
+    }
 }

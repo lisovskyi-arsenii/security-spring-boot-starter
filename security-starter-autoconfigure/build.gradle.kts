@@ -41,6 +41,7 @@ dependencies {
 
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core")
+    testImplementation("org.springframework.boot:spring-boot-starter-security")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

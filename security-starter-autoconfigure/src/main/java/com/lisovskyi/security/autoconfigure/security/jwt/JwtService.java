@@ -6,6 +6,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Jwks;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 import java.security.Key;
 import java.security.KeyFactory;
@@ -39,7 +40,8 @@ public class JwtService {
         this.jwtProperties = jwtProperties;
         this.privateKey = decodePrivateKey(jwtProperties.getPrivateKey());
         this.publicKey = derivePublicKey((RSAPrivateCrtKey) this.privateKey);
-        this.previousPrivateKey = jwtProperties.getPreviousPrivateKey() != null ? decodePrivateKey(jwtProperties.getPreviousPrivateKey()) : null;
+        boolean hasPreviousKey = StringUtils.hasText(jwtProperties.getPreviousPrivateKey());
+        this.previousPrivateKey = hasPreviousKey ? decodePrivateKey(jwtProperties.getPreviousPrivateKey()) : null;
         this.previousPublicKey = previousPrivateKey != null ? derivePublicKey((RSAPrivateCrtKey) previousPrivateKey) : null;
         this.keyId = Jwks.builder().key(this.publicKey).idFromThumbprint().build().getId();
         this.previousKeyId = previousPublicKey != null ? Jwks.builder().key(previousPublicKey).idFromThumbprint().build().getId() : null;
