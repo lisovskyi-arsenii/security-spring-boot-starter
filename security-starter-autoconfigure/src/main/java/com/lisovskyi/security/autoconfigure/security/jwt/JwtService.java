@@ -4,10 +4,16 @@ import com.lisovskyi.security.autoconfigure.security.SecurityPrincipal;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.Jwks;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.crypto.SecretKey;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.RSAPublicKeySpec;
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,7 +24,9 @@ import java.util.function.Function;
 public class JwtService {
 
     private final JwtProperties jwtProperties;
-    private final SecretKey cachedSigningKey;
+    private final PrivateKey privateKey;
+    @Getter private final RSAPublicKey publicKey;
+    @Getter private final String keyId;
 
     /**
      * Decodes and caches the signing key at construction time, so every
@@ -26,27 +34,19 @@ public class JwtService {
      */
     public JwtService(JwtProperties jwtProperties) {
         this.jwtProperties = jwtProperties;
-        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.getSigningKey());
-        this.cachedSigningKey = Keys.hmacShaKeyFor(keyBytes);
+        this.privateKey = decodePrivateKey(jwtProperties.getPrivateKey());
+        this.publicKey = derivePublicKey((RSAPrivateCrtKey) this.privateKey);
+        this.keyId = Jwks.builder().key(this.publicKey).idFromThumbprint().build().getId();
     }
 
     public String extractSubject(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    public String generateToken(SecurityPrincipal securityPrincipal) {
-        Map<String, Object> claims = new HashMap<>();
-
-        claims.put("id", securityPrincipal.getId());
-        claims.put("role", securityPrincipal.getRole());
-
-        return generateToken(claims, securityPrincipal, jwtProperties.getAccessTokenExpiration());
-    }
-
     public boolean isTokenValid(String token, SecurityPrincipal securityPrincipal) {
         try {
             final String subjectId = extractSubject(token);
-            return (subjectId.equals(securityPrincipal.getId().toString()) && !isTokenExpired(token));
+            return (subjectId.equals(securityPrincipal.getId().toString()) && isTokenExpired(token));
         } catch (Exception e) {
             log.debug("Token validation failed for principal {}: {}", securityPrincipal.getId(), e.getMessage());
             return false;
@@ -56,24 +56,30 @@ public class JwtService {
     public boolean isTokenValid(String token) {
         try {
             extractAllClaims(token);
-            return !isTokenExpired(token);
+            return isTokenExpired(token);
         } catch (Exception e) {
             log.debug("Token validation failed: {}", e.getMessage());
             return false;
         }
     }
 
-    private String generateToken(Map<String, Object> claims, SecurityPrincipal securityPrincipal, long expiration) {
+    public String generateToken(SecurityPrincipal principal, Map<String, Object> extraClaims) {
+        Map<String, Object> claims = new HashMap<>(extraClaims);
+        claims.put("id", principal.getId());
+        return generateToken(claims, principal, jwtProperties.getAccessTokenExpiration());
+    }
+
+    private String generateToken(Map<String, Object> claims, SecurityPrincipal principal, long expiration) {
         Instant now = Instant.now();
-        String subjectId = securityPrincipal.getId().toString();
 
         return Jwts.builder()
+                .header().keyId(keyId).and()
                 .claims(claims)
-                .subject(subjectId)
+                .subject(principal.getId().toString())
                 .issuer(jwtProperties.getIssuer())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusMillis(expiration)))
-                .signWith(cachedSigningKey)
+                .signWith(privateKey, Jwts.SIG.RS256)
                 .compact();
     }
 
@@ -83,7 +89,7 @@ public class JwtService {
     }
 
     private boolean isTokenExpired(String token) {
-        return extractExpiration(token).isBefore(Instant.now());
+        return !extractExpiration(token).isBefore(Instant.now());
     }
 
     public Instant extractExpiration(String token) {
@@ -92,10 +98,31 @@ public class JwtService {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .verifyWith(cachedSigningKey)
+                .verifyWith(publicKey)
                 .requireIssuer(jwtProperties.getIssuer())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    private PrivateKey decodePrivateKey(String base64) {
+        byte[] keyBytes = Decoders.BASE64.decode(base64);
+        try {
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            return kf.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
+        } catch (Exception e) {
+            throw new IllegalStateException("Cannot load JWT private key", e);
+        }
+    }
+
+    private RSAPublicKey derivePublicKey(RSAPrivateCrtKey privateKey) {
+        try {
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            RSAPublicKeySpec spec = new RSAPublicKeySpec(
+                    privateKey.getModulus(), privateKey.getPublicExponent());
+            return (RSAPublicKey) kf.generatePublic(spec);
+        } catch (Exception e) {
+            throw new IllegalStateException("Cannot derive JWT public key", e);
+        }
     }
 }

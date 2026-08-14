@@ -30,6 +30,12 @@ public class SecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    public JwksController jwksController(JwtService jwtService) {
+        return new JwksController(jwtService);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     public OpaqueTokenService opaqueTokenService() {
         return new OpaqueTokenService();
     }

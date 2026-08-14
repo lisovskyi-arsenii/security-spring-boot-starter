@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Setter
 @ConfigurationProperties(prefix = "app.jwt")
 public class JwtProperties {
-    private String signingKey;
+    private String privateKey;
     private long accessTokenExpiration = 900000; // 15 mins
     private long refreshTokenExpiration = 604800000; // 7 days
     private String issuer = "lisovskyi-security-service";

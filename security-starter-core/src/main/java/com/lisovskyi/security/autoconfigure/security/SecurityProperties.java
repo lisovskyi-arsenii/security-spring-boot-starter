@@ -18,7 +18,8 @@ public class SecurityProperties {
             "/auth/**",
             "/error/**",
             "/swagger-ui/**",
-            "/v3/api-docs/**"
+            "/v3/api-docs/**",
+            "/.well-known/jwks.json"
     );
 
     private List<String> allowedOrigins = List.of("*");
