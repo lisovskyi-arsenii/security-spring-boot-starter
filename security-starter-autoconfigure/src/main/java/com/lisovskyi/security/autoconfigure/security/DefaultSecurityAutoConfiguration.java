@@ -22,6 +22,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -86,6 +87,20 @@ public class DefaultSecurityAutoConfiguration {
         if (chainCustomizer != null) {
             chainCustomizer.customize(http);
         }
+
+        // A customizer may raise sessionCreationPolicy above STATELESS for its own
+        // reasons (e.g. oauth2Login() needs a session-backed AuthorizationRequestRepository
+        // for the redirect round-trip) - that alone makes Spring Security default the
+        // SecurityContext itself to HttpSessionSecurityContextRepository for the *whole*
+        // chain, not just the OAuth2 endpoints. That silently drags CsrfAuthenticationStrategy
+        // into play: every JWT-cookie-authenticated request that doesn't carry a session
+        // cookie looks like "first login in a new session" to SessionManagementFilter, so it
+        // rotates (deletes, since this runs after CsrfFilter/CsrfCookieFilter already wrote
+        // the response's Set-Cookie) the CSRF cookie on requests that never touched OAuth2 at
+        // all. Pin the security-context repository back to request-scoped explicitly, as the
+        // last word after any customizer - this is a different repository interface from
+        // OAuth2Login's own authorization-request storage, so it doesn't affect that flow.
+        http.securityContext(context -> context.securityContextRepository(new RequestAttributeSecurityContextRepository()));
 
         if (jwtAuthFilter != null) {
             http.addFilterBefore(
