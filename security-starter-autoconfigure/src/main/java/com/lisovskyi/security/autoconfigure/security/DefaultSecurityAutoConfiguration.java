@@ -22,6 +22,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
@@ -92,15 +93,27 @@ public class DefaultSecurityAutoConfiguration {
         // reasons (e.g. oauth2Login() needs a session-backed AuthorizationRequestRepository
         // for the redirect round-trip) - that alone makes Spring Security default the
         // SecurityContext itself to HttpSessionSecurityContextRepository for the *whole*
-        // chain, not just the OAuth2 endpoints. That silently drags CsrfAuthenticationStrategy
-        // into play: every JWT-cookie-authenticated request that doesn't carry a session
-        // cookie looks like "first login in a new session" to SessionManagementFilter, so it
-        // rotates (deletes, since this runs after CsrfFilter/CsrfCookieFilter already wrote
-        // the response's Set-Cookie) the CSRF cookie on requests that never touched OAuth2 at
-        // all. Pin the security-context repository back to request-scoped explicitly, as the
-        // last word after any customizer - this is a different repository interface from
-        // OAuth2Login's own authorization-request storage, so it doesn't affect that flow.
+        // chain, not just the OAuth2 endpoints. Pin it back to request-scoped explicitly -
+        // this is a different repository interface from OAuth2Login's own authorization-
+        // request storage, so it doesn't affect that flow.
         http.securityContext(context -> context.securityContextRepository(new RequestAttributeSecurityContextRepository()));
+
+        // The real trigger for the CSRF-cookie-deletion bug this whole block exists for:
+        // whenever sessionCreationPolicy is above STATELESS, SessionManagementFilter stays
+        // in the chain (removed entirely for a purely STATELESS chain, but a customizer's
+        // IF_REQUIRED override for oauth2Login's sake keeps it), and it runs its configured
+        // SessionAuthenticationStrategy - which defaults to a composite that includes
+        // CsrfAuthenticationStrategy - on *every* request where SecurityContextHolder holds
+        // a freshly-set Authentication that this filter hasn't already associated with a
+        // session. JwtAuthFilter re-authenticates from the JWT cookie on every single
+        // request (there's no session to remember it was "already seen"), so every one of
+        // them looks like "first login" and gets its CSRF token replaced - which, since
+        // SessionManagementFilter runs after CsrfFilter/CsrfCookieFilter already wrote the
+        // response, actually means deleted (Max-Age=0), not usefully rotated. Silencing the
+        // strategy entirely (not just the repository, above) is what actually stops it -
+        // legitimate for this chain since none of its real security here depends on
+        // session-fixation protection: JWT is the actual credential, not any session ID.
+        http.sessionManagement(session -> session.sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy()));
 
         if (jwtAuthFilter != null) {
             http.addFilterBefore(
