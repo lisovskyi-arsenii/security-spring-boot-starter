@@ -20,9 +20,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
@@ -100,20 +100,28 @@ public class DefaultSecurityAutoConfiguration {
 
         // The real trigger for the CSRF-cookie-deletion bug this whole block exists for:
         // whenever sessionCreationPolicy is above STATELESS, SessionManagementFilter stays
-        // in the chain (removed entirely for a purely STATELESS chain, but a customizer's
-        // IF_REQUIRED override for oauth2Login's sake keeps it), and it runs its configured
-        // SessionAuthenticationStrategy - which defaults to a composite that includes
-        // CsrfAuthenticationStrategy - on *every* request where SecurityContextHolder holds
-        // a freshly-set Authentication that this filter hasn't already associated with a
-        // session. JwtAuthFilter re-authenticates from the JWT cookie on every single
-        // request (there's no session to remember it was "already seen"), so every one of
-        // them looks like "first login" and gets its CSRF token replaced - which, since
+        // in the chain (omitted entirely only for a purely STATELESS chain, but a
+        // customizer's IF_REQUIRED override for oauth2Login's sake keeps it), and it runs
+        // on *every* request where SecurityContextHolder holds an Authentication this
+        // filter hasn't already associated with a session. JwtAuthFilter re-authenticates
+        // from the JWT cookie fresh on every single request - there's no session to
+        // remember it was "already seen" - so every request looks like "first login" and
+        // triggers its configured SessionAuthenticationStrategy, which - since it always
+        // has CsrfAuthenticationStrategy folded in whenever csrf() is enabled, regardless
+        // of what's passed to sessionAuthenticationStrategy(...) below (tried that first;
+        // it compiles and runs, but CsrfAuthenticationStrategy still fires - the composite
+        // isn't actually replaceable through that setter) - replaces the CSRF token. Since
         // SessionManagementFilter runs after CsrfFilter/CsrfCookieFilter already wrote the
-        // response, actually means deleted (Max-Age=0), not usefully rotated. Silencing the
-        // strategy entirely (not just the repository, above) is what actually stops it -
-        // legitimate for this chain since none of its real security here depends on
-        // session-fixation protection: JWT is the actual credential, not any session ID.
-        http.sessionManagement(session -> session.sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy()));
+        // response, "replaced" actually means deleted (Max-Age=0), not usefully rotated.
+        //
+        // Removing the configurer outright is what actually works: HttpSecurity never adds
+        // SessionManagementFilter to the chain at all, so there's no path left for
+        // CsrfAuthenticationStrategy to run from. Legitimate here since none of this
+        // chain's real security depends on session-fixation protection (JWT is the actual
+        // credential, not any session ID), and oauth2Login's own authorization-request
+        // storage creates its session directly via HttpSessionOAuth2AuthorizationRequestRepository,
+        // independent of this filter/configurer entirely.
+        http.removeConfigurer(SessionManagementConfigurer.class);
 
         if (jwtAuthFilter != null) {
             http.addFilterBefore(
