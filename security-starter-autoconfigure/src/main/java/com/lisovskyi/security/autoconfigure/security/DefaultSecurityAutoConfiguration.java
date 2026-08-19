@@ -2,6 +2,8 @@ package com.lisovskyi.security.autoconfigure.security;
 
 import com.lisovskyi.security.autoconfigure.cookie.CsrfCookieFilter;
 import com.lisovskyi.security.autoconfigure.security.jwt.JwtAuthFilter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -20,12 +22,13 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -69,7 +72,7 @@ public class DefaultSecurityAutoConfiguration {
                 )
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers(securityProperties.getPublicPaths().toArray(String[]::new))
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(nonDeletingCsrfTokenRepository())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                 )
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -98,31 +101,6 @@ public class DefaultSecurityAutoConfiguration {
         // request storage, so it doesn't affect that flow.
         http.securityContext(context -> context.securityContextRepository(new RequestAttributeSecurityContextRepository()));
 
-        // The real trigger for the CSRF-cookie-deletion bug this whole block exists for:
-        // whenever sessionCreationPolicy is above STATELESS, SessionManagementFilter stays
-        // in the chain (omitted entirely only for a purely STATELESS chain, but a
-        // customizer's IF_REQUIRED override for oauth2Login's sake keeps it), and it runs
-        // on *every* request where SecurityContextHolder holds an Authentication this
-        // filter hasn't already associated with a session. JwtAuthFilter re-authenticates
-        // from the JWT cookie fresh on every single request - there's no session to
-        // remember it was "already seen" - so every request looks like "first login" and
-        // triggers its configured SessionAuthenticationStrategy, which - since it always
-        // has CsrfAuthenticationStrategy folded in whenever csrf() is enabled, regardless
-        // of what's passed to sessionAuthenticationStrategy(...) below (tried that first;
-        // it compiles and runs, but CsrfAuthenticationStrategy still fires - the composite
-        // isn't actually replaceable through that setter) - replaces the CSRF token. Since
-        // SessionManagementFilter runs after CsrfFilter/CsrfCookieFilter already wrote the
-        // response, "replaced" actually means deleted (Max-Age=0), not usefully rotated.
-        //
-        // Removing the configurer outright is what actually works: HttpSecurity never adds
-        // SessionManagementFilter to the chain at all, so there's no path left for
-        // CsrfAuthenticationStrategy to run from. Legitimate here since none of this
-        // chain's real security depends on session-fixation protection (JWT is the actual
-        // credential, not any session ID), and oauth2Login's own authorization-request
-        // storage creates its session directly via HttpSessionOAuth2AuthorizationRequestRepository,
-        // independent of this filter/configurer entirely.
-        http.removeConfigurer(SessionManagementConfigurer.class);
-
         if (jwtAuthFilter != null) {
             http.addFilterBefore(
                     jwtAuthFilter,
@@ -144,6 +122,48 @@ public class DefaultSecurityAutoConfiguration {
         http.authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
 
         return http.build();
+    }
+
+    // Whenever a SecurityFilterChainCustomizer raises sessionCreationPolicy above
+    // STATELESS for its own reasons (e.g. oauth2Login() needs a session-backed
+    // AuthorizationRequestRepository for the redirect round-trip), SessionManagementFilter
+    // stays in the chain and folds CsrfAuthenticationStrategy into the session-management
+    // strategy it runs on every request - unconditionally, there's no supported way to
+    // opt a chain out of it once csrf() is enabled (verified: neither an explicit
+    // sessionAuthenticationStrategy(...) override nor removing SessionManagementConfigurer
+    // outright stopped it without breaking something else). On every JWT-cookie-
+    // authenticated request - which is every request, since there's no session to
+    // remember "already seen" - that strategy treats it as a fresh login and calls
+    // saveToken(null, ...) to rotate the CSRF token. Since SessionManagementFilter runs
+    // after CsrfFilter/CsrfCookieFilter already wrote this response's real Set-Cookie,
+    // "rotate" actually means delete (Max-Age=0), not usefully replace.
+    //
+    // Fix this at its exact mechanical source instead of fighting the filter chain: a
+    // thin CsrfTokenRepository wrapper that ignores saveToken(null, ...) specifically.
+    // CsrfCookieFilter already keeps the cookie fresh and valid on every request
+    // regardless, so there is nothing this null-token save call ever legitimately needed
+    // to do here.
+    private CsrfTokenRepository nonDeletingCsrfTokenRepository() {
+        CsrfTokenRepository delegate = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        return new CsrfTokenRepository() {
+            @Override
+            public CsrfToken generateToken(HttpServletRequest request) {
+                return delegate.generateToken(request);
+            }
+
+            @Override
+            public void saveToken(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
+                if (token == null) {
+                    return;
+                }
+                delegate.saveToken(token, request, response);
+            }
+
+            @Override
+            public CsrfToken loadToken(HttpServletRequest request) {
+                return delegate.loadToken(request);
+            }
+        };
     }
 
     @Bean
