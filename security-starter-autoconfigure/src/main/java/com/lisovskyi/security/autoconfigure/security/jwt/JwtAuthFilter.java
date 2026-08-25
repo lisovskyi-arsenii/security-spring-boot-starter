@@ -12,6 +12,7 @@ import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
@@ -101,7 +102,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 null,
                 userDetails.getAuthorities()
         );
-        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        WebAuthenticationDetails webDetails = new WebAuthenticationDetailsSource().buildDetails(request);
+        authToken.setDetails(new JwtAuthenticationDetails(webDetails, jwtService.extractClaims(jwt)));
         SecurityContextHolder.getContext().setAuthentication(authToken);
     }
 }

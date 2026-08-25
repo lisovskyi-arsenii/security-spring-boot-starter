@@ -51,6 +51,17 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    /**
+     * Every claim baked into the token at issue time (e.g. {@code org_id}, {@code roles}),
+     * exposed as a plain {@code Map} so callers don't need jjwt on their own classpath.
+     * {@code JwtAuthFilter} reads this to populate {@link JwtAuthenticationDetails} - services
+     * needing a claim beyond the user id (which {@code UserByIdDetailsService.loadUserById}
+     * already covers) go through {@code SecurityUtils} rather than re-parsing the token.
+     */
+    public Map<String, Object> extractClaims(String token) {
+        return extractAllClaims(token);
+    }
+
     public boolean isTokenValid(String token, SecurityPrincipal securityPrincipal) {
         try {
             final String subjectId = extractSubject(token);
