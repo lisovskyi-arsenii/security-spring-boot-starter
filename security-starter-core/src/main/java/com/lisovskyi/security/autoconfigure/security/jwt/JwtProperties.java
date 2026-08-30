@@ -10,7 +10,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class JwtProperties {
     private String privateKey;
     private String previousPrivateKey;
+
+    private String publicKey;
+    private String previousPublicKey;
+
+    private String jwksUri;
+
     private long accessTokenExpiration = 900000; // 15 mins
     private long refreshTokenExpiration = 604800000; // 7 days
+
     private String issuer = "lisovskyi-security-service";
 }

@@ -27,6 +27,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     api("com.github.ben-manes.caffeine:caffeine:$caffeineVersion")
     implementation("org.checkerframework:checker-qual:$checkerVersion")
+    implementation("org.springframework.security:spring-security-oauth2-jose")
 
     runtimeOnly("io.jsonwebtoken:jjwt-impl:$jwtVersion")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:$jwtVersion")
