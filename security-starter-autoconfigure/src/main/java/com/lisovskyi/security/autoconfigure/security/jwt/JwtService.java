@@ -59,7 +59,9 @@ public class JwtService {
             this.previousPublicKey = previousPrivateKey != null ? derivePublicKey((RSAPrivateCrtKey) previousPrivateKey) : null;
 
             this.keyId = Jwks.builder().key(this.publicKey).idFromThumbprint().build().getId();
-            this.previousKeyId = previousPublicKey != null ? Jwks.builder().key(previousPublicKey).idFromThumbprint().build().getId() : null;
+            this.previousKeyId = previousPublicKey != null
+                    ? Jwks.builder().key(previousPublicKey).idFromThumbprint().build().getId()
+                    : null;
         } else if (StringUtils.hasText(jwtProperties.getPublicKey())) {
             this.isIssuer = false;
             this.privateKey = null;
