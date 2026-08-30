@@ -140,4 +140,64 @@ class JwtServiceTest {
                 .isNotNull()
                 .isNotEqualTo(service.getKeyId());
     }
+
+    // ---- Static Validator edge cases -------------------------------
+
+    @Test
+    void validator_withPublicKeyOnly_validatesTokenCorrectly() throws Exception {
+        // Issuer has private key
+        JwtService issuer = new JwtService(propertiesFor(keyA, null));
+        String token = issuer.generateToken(testPrincipal(), Map.of());
+
+        // Validator has public key only
+        JwtProperties validatorProps = new JwtProperties();
+        validatorProps.setPublicKey(deriveBase64PublicKey(keyA));
+        validatorProps.setIssuer("rotation-test");
+        JwtService validator = new JwtService(validatorProps);
+
+        assertThat(validator.isTokenValid(token)).isTrue();
+    }
+
+    @Test
+    void validator_withPublicKeyOnly_cannotGenerateTokens() throws Exception {
+        JwtProperties validatorProps = new JwtProperties();
+        validatorProps.setPublicKey(deriveBase64PublicKey(keyA));
+        validatorProps.setIssuer("rotation-test");
+        JwtService validator = new JwtService(validatorProps);
+
+        org.junit.jupiter.api.Assertions.assertThrows(UnsupportedOperationException.class, () -> {
+            validator.generateToken(testPrincipal(), Map.of());
+        });
+    }
+
+    // ---- Configuration validation -------------------------------
+
+    @Test
+    void configuration_withMultipleKeys_throwsException() throws Exception {
+        JwtProperties invalidProps = new JwtProperties();
+        invalidProps.setPrivateKey(keyA);
+        invalidProps.setPublicKey(deriveBase64PublicKey(keyA));
+        
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> {
+            new JwtService(invalidProps);
+        });
+    }
+
+    @Test
+    void configuration_withNoKeys_throwsException() {
+        JwtProperties invalidProps = new JwtProperties();
+        
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> {
+            new JwtService(invalidProps);
+        });
+    }
+
+    private static String deriveBase64PublicKey(String base64PrivateKey) throws Exception {
+        byte[] keyBytes = java.util.Base64.getDecoder().decode(base64PrivateKey);
+        java.security.KeyFactory kf = java.security.KeyFactory.getInstance("RSA");
+        java.security.interfaces.RSAPrivateCrtKey privKey = (java.security.interfaces.RSAPrivateCrtKey) kf.generatePrivate(new java.security.spec.PKCS8EncodedKeySpec(keyBytes));
+        java.security.spec.RSAPublicKeySpec pubSpec = new java.security.spec.RSAPublicKeySpec(privKey.getModulus(), privKey.getPublicExponent());
+        java.security.PublicKey pubKey = kf.generatePublic(pubSpec);
+        return java.util.Base64.getEncoder().encodeToString(pubKey.getEncoded());
+    }
 }
