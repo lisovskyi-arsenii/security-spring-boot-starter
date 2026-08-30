@@ -8,7 +8,9 @@ import java.util.Optional;
 
 public final class SecurityUtils {
 
-    private SecurityUtils() {}
+    private SecurityUtils() {
+        throw new UnsupportedOperationException();
+    }
 
     public static Optional<Authentication> getCurrentAuthentication() {
         return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication());

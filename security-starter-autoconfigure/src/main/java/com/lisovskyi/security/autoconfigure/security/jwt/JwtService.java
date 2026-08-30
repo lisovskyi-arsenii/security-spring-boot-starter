@@ -6,6 +6,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Jwks;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -31,10 +32,13 @@ public class JwtService {
     private static final String KEY_FACTORY_ALGORITHM = "RSA";
 
     private final JwtProperties jwtProperties;
+
     private final PrivateKey privateKey;
     private final PrivateKey previousPrivateKey;
+
     @Getter private final RSAPublicKey publicKey;
     @Getter private final RSAPublicKey previousPublicKey;
+
     @Getter private final String keyId;
     @Getter private final String previousKeyId;
 
@@ -95,7 +99,7 @@ public class JwtService {
         }
     }
 
-    public String extractSubject(String token) {
+    public String extractSubject(final String token) {
         if (nimbusJwtDecoder != null) {
             return nimbusJwtDecoder.decode(token).getSubject();
         }
@@ -109,14 +113,14 @@ public class JwtService {
      * needing a claim beyond the user id (which {@code UserByIdDetailsService.loadUserById}
      * already covers) go through {@code SecurityUtils} rather than re-parsing the token.
      */
-    public Map<String, Object> extractClaims(String token) {
+    public Map<String, Object> extractClaims(final String token) {
         if (nimbusJwtDecoder != null) {
             return nimbusJwtDecoder.decode(token).getClaims();
         }
         return extractAllClaims(token);
     }
 
-    public boolean isTokenValid(String token, SecurityPrincipal securityPrincipal) {
+    public boolean isTokenValid(final String token, final SecurityPrincipal securityPrincipal) {
         try {
             final String subjectId = extractSubject(token);
             return subjectId.equals(securityPrincipal.getId().toString()) && isTokenNotExpired(token);
@@ -126,7 +130,7 @@ public class JwtService {
         }
     }
 
-    public boolean isTokenValid(String token) {
+    public boolean isTokenValid(final String token) {
         try {
             if (nimbusJwtDecoder != null) {
                 Jwt jwt = nimbusJwtDecoder.decode(token);
@@ -141,7 +145,7 @@ public class JwtService {
         }
     }
 
-    public String generateToken(SecurityPrincipal principal, Map<String, Object> extraClaims) {
+    public String generateToken(final SecurityPrincipal principal, final Map<String, Object> extraClaims) {
         if (!isIssuer) {
             throw new UnsupportedOperationException(
                     "This JwtService instance is configured for validation only and cannot generate tokens.");
@@ -151,7 +155,7 @@ public class JwtService {
         return generateToken(claims, principal, jwtProperties.getAccessTokenExpiration());
     }
 
-    private String generateToken(Map<String, Object> claims, SecurityPrincipal principal, long expiration) {
+    private String generateToken(final Map<String, Object> claims, final SecurityPrincipal principal, long expiration) {
         Instant now = Instant.now();
 
         return Jwts.builder()
@@ -165,29 +169,29 @@ public class JwtService {
                 .compact();
     }
 
-    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+    private <T> T extractClaim(final String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
-    private boolean isTokenNotExpired(String token) {
+    private boolean isTokenNotExpired(final String token) {
         return !extractExpiration(token).isBefore(Instant.now());
     }
 
-    public Instant extractExpiration(String token) {
+    public Instant extractExpiration(final String token) {
         if (nimbusJwtDecoder != null) {
             return nimbusJwtDecoder.decode(token).getExpiresAt();
         }
         return extractClaim(token, Claims::getExpiration).toInstant();
     }
 
-    private Claims extractAllClaims(String token) {
+    private Claims extractAllClaims(final String token) {
         if (nimbusJwtDecoder != null) {
             throw new IllegalStateException(
                     "extractAllClaims is not supported when configured via JWKS URI; use nimbusJwtDecoder directly");
         }
         return Jwts.parser()
-                .keyLocator(new LocatorAdapter<Key>() {
+                .keyLocator(new LocatorAdapter<>() {
                     @Override
                     protected Key locate(JwsHeader header) {
                         String kid = header.getKeyId();
@@ -202,7 +206,7 @@ public class JwtService {
                 .getPayload();
     }
 
-    private PrivateKey decodePrivateKey(String base64) {
+    private PrivateKey decodePrivateKey(final String base64) {
         byte[] keyBytes = decodeBase64(base64);
         try {
             KeyFactory kf = KeyFactory.getInstance(KEY_FACTORY_ALGORITHM);
@@ -212,7 +216,7 @@ public class JwtService {
         }
     }
 
-    private RSAPublicKey decodePublicKey(String base64) {
+    private RSAPublicKey decodePublicKey(final String base64) {
         byte[] keyBytes = decodeBase64(base64);
         try {
             KeyFactory kf = KeyFactory.getInstance(KEY_FACTORY_ALGORITHM);
@@ -227,12 +231,12 @@ public class JwtService {
      * '-'/'_' instead of '+'/'/'), so key loading doesn't depend on which variant the
      * upstream source happens to produce.
      */
-    private byte[] decodeBase64(String base64) {
+    private byte[] decodeBase64(final String base64) {
         String normalized = base64.replace('-', '+').replace('_', '/');
         return Decoders.BASE64.decode(normalized);
     }
 
-    private RSAPublicKey derivePublicKey(RSAPrivateCrtKey privateKey) {
+    private RSAPublicKey derivePublicKey(@NonNull final RSAPrivateCrtKey privateKey) {
         try {
             KeyFactory kf = KeyFactory.getInstance(KEY_FACTORY_ALGORITHM);
             RSAPublicKeySpec spec = new RSAPublicKeySpec(

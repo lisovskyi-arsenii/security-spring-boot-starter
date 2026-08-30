@@ -4,28 +4,31 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Optional;
 
 @RequiredArgsConstructor
 public class CookieService {
+
     private final CookieProperties cookieProperties;
 
     @Value("${server.servlet.context-path:}")
     private String contextPath;
 
-    public Optional<String> getAccessTokenCookie(HttpServletRequest request) {
+    public Optional<String> getAccessTokenCookie(@NonNull final HttpServletRequest request) {
         return getCookieValue(request, cookieProperties.getAccessTokenName());
     }
 
-    public Optional<String> getRefreshTokenCookie(HttpServletRequest request) {
+    public Optional<String> getRefreshTokenCookie(@NonNull final HttpServletRequest request) {
         return getCookieValue(request, cookieProperties.getRefreshTokenName());
     }
 
-    public void setAccessTokenCookie(HttpServletResponse response, String accessToken) {
+    public void setAccessTokenCookie(@NonNull final HttpServletResponse response, final String accessToken) {
         String path = buildFullPath(cookieProperties.getAccessTokenPath());
         buildCookie(
                 response,
@@ -36,8 +39,8 @@ public class CookieService {
         );
     }
 
-    public void clearAccessTokenCookie(HttpServletResponse response) {
-        String path = buildFullPath(cookieProperties.getAccessTokenPath());
+    public void clearAccessTokenCookie(@NonNull final HttpServletResponse response) {
+        final String path = buildFullPath(cookieProperties.getAccessTokenPath());
         buildCookie(
                 response,
                 cookieProperties.getAccessTokenName(),
@@ -47,8 +50,8 @@ public class CookieService {
         );
     }
 
-    public void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
-        String fullPath = buildFullPath(cookieProperties.getRefreshTokenPath());
+    public void setRefreshTokenCookie(@NonNull final HttpServletResponse response, final String refreshToken) {
+        final String fullPath = buildFullPath(cookieProperties.getRefreshTokenPath());
 
         buildCookie(
                 response,
@@ -59,8 +62,8 @@ public class CookieService {
         );
     }
 
-    public void clearRefreshTokenCookie(HttpServletResponse response) {
-        String fullPath = buildFullPath(cookieProperties.getRefreshTokenPath());
+    public void clearRefreshTokenCookie(@NonNull final HttpServletResponse response) {
+        final String fullPath = buildFullPath(cookieProperties.getRefreshTokenPath());
 
         buildCookie(
                 response,
@@ -72,11 +75,11 @@ public class CookieService {
     }
 
     private void buildCookie(
-            HttpServletResponse response,
-            String name,
-            String value,
+            @NonNull final HttpServletResponse response,
+            @NonNull final String name,
+            @NonNull final String value,
             long maxAge,
-            String path
+            @NonNull final String path
     ) {
         ResponseCookie cookie = ResponseCookie.from(name, value)
                 .httpOnly(true)
@@ -90,13 +93,12 @@ public class CookieService {
     }
 
     private String buildFullPath(String partialPath) {
-        String base = contextPath.replaceAll("/$", "");
-        String path = partialPath.startsWith("/") ? partialPath : "/" + partialPath;
-
-        return base + path;
+        return UriComponentsBuilder.fromPath(contextPath)
+                .path(partialPath)
+                .toUriString();
     }
 
-    private Optional<String> getCookieValue(HttpServletRequest request, String name) {
+    private Optional<String> getCookieValue(@NonNull final HttpServletRequest request, final String name) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
             return Optional.empty();

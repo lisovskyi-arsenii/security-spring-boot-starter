@@ -32,7 +32,6 @@ import java.util.HexFormat;
 public class OpaqueTokenService {
 
     private static final int TOKEN_BYTES = 32; // 256 bits
-
     private final SecureRandom secureRandom = new SecureRandom();
 
     /**

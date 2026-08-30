@@ -6,7 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.NonNull;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,6 +20,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 import java.io.IOException;
 
 public class JwtAuthFilter extends OncePerRequestFilter {
+
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
@@ -27,15 +28,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final CookieService cookieService;
     private final UserByIdDetailsService userDetailsService;
     private final JwtBlacklistService jwtBlacklistService;
+
     private final HandlerExceptionResolver exceptionResolver;
 
-
     public JwtAuthFilter(
-            JwtService jwtService,
-            CookieService cookieService,
-            UserByIdDetailsService userDetailsService,
-            JwtBlacklistService jwtBlacklistService,
-            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver
+            @NonNull final JwtService jwtService,
+            @NonNull final CookieService cookieService,
+            @NonNull final UserByIdDetailsService userDetailsService,
+            @NonNull final JwtBlacklistService jwtBlacklistService,
+            @NonNull @Qualifier("handlerExceptionResolver") final HandlerExceptionResolver handlerExceptionResolver
     ) {
         this.jwtService = jwtService;
         this.cookieService = cookieService;
@@ -46,9 +47,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(
-            @NonNull HttpServletRequest request,
-            @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain
+            @NonNull final HttpServletRequest request,
+            @NonNull final HttpServletResponse response,
+            @NonNull final FilterChain filterChain
     ) throws ServletException, IOException {
         try {
             String jwt = extractTokenFromHeader(request);
@@ -86,7 +87,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
     }
 
-    private String extractTokenFromHeader(HttpServletRequest request) {
+    private String extractTokenFromHeader(@NonNull final HttpServletRequest request) {
         final String authHeader = request.getHeader(AUTHORIZATION_HEADER);
         if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
             return authHeader.substring(BEARER_PREFIX.length());
@@ -94,8 +95,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private void authenticateUser(HttpServletRequest request, String jwt, Long userId) {
-        UserDetails userDetails = userDetailsService.loadUserById(userId);
+    private void authenticateUser(@NonNull final HttpServletRequest request, final String jwt, final Long userId) {
+        final UserDetails userDetails = userDetailsService.loadUserById(userId);
 
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                 userDetails,

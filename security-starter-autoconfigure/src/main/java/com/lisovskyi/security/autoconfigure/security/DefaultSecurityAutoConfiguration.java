@@ -1,9 +1,11 @@
 package com.lisovskyi.security.autoconfigure.security;
 
+import com.lisovskyi.security.autoconfigure.cookie.CookieProperties;
 import com.lisovskyi.security.autoconfigure.cookie.CsrfCookieFilter;
 import com.lisovskyi.security.autoconfigure.security.jwt.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -35,29 +37,34 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
+import java.util.List;
+
 @AutoConfiguration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class DefaultSecurityAutoConfiguration {
+
     private final SecurityProperties securityProperties;
     private final JwtAuthFilter jwtAuthFilter;
     private final CsrfCookieFilter csrfCookieFilter;
-    private final ObjectProvider<SecurityFilterChainCustomizer> chainCustomizerProvider;
+    private final List<SecurityFilterChainCustomizer> chainCustomizers;
 
     private final HandlerExceptionResolver handlerExceptionResolver;
+    private final CookieProperties cookieProperties;
 
     public DefaultSecurityAutoConfiguration(
-            SecurityProperties securityProperties,
-            ObjectProvider<JwtAuthFilter> jwtAuthFilterProvider,
-            ObjectProvider<CsrfCookieFilter> csrfCookieFilterProvider,
+            final SecurityProperties securityProperties,
+            final ObjectProvider<JwtAuthFilter> jwtAuthFilterProvider,
+            final ObjectProvider<CsrfCookieFilter> csrfCookieFilterProvider,
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver,
-            ObjectProvider<SecurityFilterChainCustomizer> chainCustomizerProvider
-    ) {
+            final List<SecurityFilterChainCustomizer> chainCustomizers,
+            final CookieProperties cookieProperties) {
         this.securityProperties = securityProperties;
         this.jwtAuthFilter = jwtAuthFilterProvider.getIfAvailable();
         this.csrfCookieFilter = csrfCookieFilterProvider.getIfAvailable();
         this.handlerExceptionResolver = handlerExceptionResolver;
-        this.chainCustomizerProvider = chainCustomizerProvider;
+        this.chainCustomizers = chainCustomizers != null ? chainCustomizers : List.of();
+        this.cookieProperties = cookieProperties;
     }
 
     @Bean
@@ -73,7 +80,7 @@ public class DefaultSecurityAutoConfiguration {
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers(securityProperties.getPublicPaths().toArray(String[]::new))
                         .csrfTokenRepository(nonDeletingCsrfTokenRepository())
-                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
                 )
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -85,11 +92,11 @@ public class DefaultSecurityAutoConfiguration {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(securityProperties.getPublicPaths().toArray(String[]::new)).permitAll()
+                        .anyRequest().authenticated()
                 );
 
-        SecurityFilterChainCustomizer chainCustomizer = chainCustomizerProvider.getIfAvailable();
-        if (chainCustomizer != null) {
-            chainCustomizer.customize(http);
+        for (SecurityFilterChainCustomizer customizer : chainCustomizers) {
+            customizer.customize(http);
         }
 
         // A customizer may raise sessionCreationPolicy above STATELESS for its own
@@ -119,8 +126,6 @@ public class DefaultSecurityAutoConfiguration {
             );
         }
 
-        http.authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
-
         return http.build();
     }
 
@@ -143,16 +148,30 @@ public class DefaultSecurityAutoConfiguration {
     // CsrfCookieFilter already keeps the cookie fresh and valid on every request
     // regardless, so there is nothing this null-token save call ever legitimately needed
     // to do here.
+    @SuppressWarnings("java:S3330")
     private CsrfTokenRepository nonDeletingCsrfTokenRepository() {
-        CsrfTokenRepository delegate = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        CookieCsrfTokenRepository delegate = CookieCsrfTokenRepository.withHttpOnlyFalse();
+
+        delegate.setCookieName(cookieProperties.getCsrfCookieName());
+        delegate.setCookieCustomizer(customizer -> {
+            customizer
+                    .path(cookieProperties.getCsrfCookiePath())
+                    .sameSite(cookieProperties.getCsrfSameSite())
+                    .secure(cookieProperties.isSecure());
+
+            if (cookieProperties.getCsrfCookieDomain() != null && !cookieProperties.getCsrfCookieDomain().isBlank()) {
+                customizer.domain(cookieProperties.getCsrfCookieDomain());
+            }
+        });
+
         return new CsrfTokenRepository() {
             @Override
-            public CsrfToken generateToken(HttpServletRequest request) {
+            public @NonNull CsrfToken generateToken(@NonNull final HttpServletRequest request) {
                 return delegate.generateToken(request);
             }
 
             @Override
-            public void saveToken(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
+            public void saveToken(final CsrfToken token, @NonNull final HttpServletRequest request, @NonNull final HttpServletResponse response) {
                 if (token == null) {
                     return;
                 }
@@ -160,7 +179,7 @@ public class DefaultSecurityAutoConfiguration {
             }
 
             @Override
-            public CsrfToken loadToken(HttpServletRequest request) {
+            public CsrfToken loadToken(@NonNull final HttpServletRequest request) {
                 return delegate.loadToken(request);
             }
         };
@@ -192,14 +211,14 @@ public class DefaultSecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) {
+    public AuthenticationManager authenticationManager(final AuthenticationConfiguration config) {
         return config.getAuthenticationManager();
     }
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(UserDetailsService.class)
-    public AuthenticationProvider authenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+    public AuthenticationProvider authenticationProvider(final UserDetailsService userDetailsService, final PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
 
         authProvider.setPasswordEncoder(passwordEncoder);

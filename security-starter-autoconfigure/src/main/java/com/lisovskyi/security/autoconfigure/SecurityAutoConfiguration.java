@@ -39,13 +39,13 @@ public class SecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public JwtService jwtService(JwtProperties jwtProperties) {
+    public JwtService jwtService(final JwtProperties jwtProperties) {
         return new JwtService(jwtProperties);
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public JwksController jwksController(JwtService jwtService) {
+    public JwksController jwksController(final JwtService jwtService) {
         return new JwksController(jwtService);
     }
 
@@ -57,7 +57,7 @@ public class SecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public CookieService cookieService(CookieProperties cookieProperties) {
+    public CookieService cookieService(final CookieProperties cookieProperties) {
         return new CookieService(cookieProperties);
     }
 
@@ -66,7 +66,7 @@ public class SecurityAutoConfiguration {
     @ConditionalOnBean(StringRedisTemplate.class)
     @ConditionalOnSingleCandidate(StringRedisTemplate.class)
     @ConditionalOnMissingBean(JwtBlacklistService.class)
-    public JwtBlacklistService redisJwtBlacklistService(StringRedisTemplate redisTemplate) {
+    public JwtBlacklistService redisJwtBlacklistService(final StringRedisTemplate redisTemplate) {
         return new RedisJwtBlacklistService(redisTemplate);
     }
 
@@ -80,11 +80,11 @@ public class SecurityAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnBean(UserByIdDetailsService.class)
     public JwtAuthFilter jwtAuthFilter(
-            JwtService jwtService,
-            CookieService cookieService,
-            UserByIdDetailsService userDetailsService,
-            JwtBlacklistService jwtBlacklistService,
-            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver
+            final JwtService jwtService,
+            final CookieService cookieService,
+            final UserByIdDetailsService userDetailsService,
+            final JwtBlacklistService jwtBlacklistService,
+            @Qualifier("handlerExceptionResolver") final HandlerExceptionResolver handlerExceptionResolver
     ) {
         return new JwtAuthFilter(jwtService, cookieService, userDetailsService, jwtBlacklistService, handlerExceptionResolver);
     }

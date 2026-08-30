@@ -11,12 +11,14 @@ import java.util.Set;
 
 @RequiredArgsConstructor
 public class RedisJwtBlacklistService implements JwtBlacklistService {
+
     private static final String PREFIX = "jwt:blacklist:";
     private static final int BATCH_SIZE = 1000;
+
     private final StringRedisTemplate redisTemplate;
 
     @Override
-    public void addToBlacklist(String jwt, long expirationTimeInMillis) {
+    public void addToBlacklist(final String jwt, long expirationTimeInMillis) {
         long ttl = expirationTimeInMillis - System.currentTimeMillis();
         if (ttl > 0) {
             String key = PREFIX + hashToken(jwt);
@@ -25,12 +27,12 @@ public class RedisJwtBlacklistService implements JwtBlacklistService {
     }
 
     @Override
-    public boolean isBlacklisted(String jwt) {
+    public boolean isBlacklisted(final String jwt) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(PREFIX + hashToken(jwt)));
     }
 
     @Override
-    public void removeFromBlacklist(String jwt) {
+    public void removeFromBlacklist(final String jwt) {
         redisTemplate.delete(PREFIX + hashToken(jwt));
     }
 
@@ -38,6 +40,7 @@ public class RedisJwtBlacklistService implements JwtBlacklistService {
     public void clearBlacklist() {
         ScanOptions options = ScanOptions.scanOptions().match(PREFIX + "*").count(BATCH_SIZE).build();
         Set<String> keys = new HashSet<>();
+
         try (Cursor<String> cursor = redisTemplate.scan(options)) {
             while (cursor.hasNext()) {
                 keys.add(cursor.next());

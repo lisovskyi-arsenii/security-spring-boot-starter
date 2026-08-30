@@ -7,10 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.jspecify.annotations.NonNull;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 @Slf4j
 public class InMemoryJwtBlacklistService implements JwtBlacklistService {
+
     private final Cache<String, Boolean> blacklist = Caffeine.newBuilder()
             .expireAfter(new Expiry<String, Boolean>() {
                 @Override
@@ -33,24 +34,26 @@ public class InMemoryJwtBlacklistService implements JwtBlacklistService {
     }
 
     @Override
-    public void addToBlacklist(String jwt, long expirationTimeInMillis) {
+    public void addToBlacklist(final String jwt, long expirationTimeInMillis) {
         long ttlMillis = expirationTimeInMillis - System.currentTimeMillis();
         if (ttlMillis > 0) {
             String key = hashToken(jwt);
             blacklist.policy().expireVariably().ifPresentOrElse(
-                    policy -> policy.put(key, Boolean.TRUE, ttlMillis, TimeUnit.MILLISECONDS),
+                    policy -> {
+                        policy.put(key, Boolean.TRUE, Duration.ofMillis(ttlMillis));
+                    },
                     () -> blacklist.put(key, Boolean.TRUE)
             );
         }
     }
 
     @Override
-    public boolean isBlacklisted(String jwt) {
+    public boolean isBlacklisted(final String jwt) {
         return blacklist.getIfPresent(hashToken(jwt)) != null;
     }
 
     @Override
-    public void removeFromBlacklist(String jwt) {
+    public void removeFromBlacklist(final String jwt) {
         blacklist.invalidate(hashToken(jwt));
     }
 

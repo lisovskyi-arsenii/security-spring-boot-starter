@@ -4,7 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.NonNull;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.MDC;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -24,9 +24,9 @@ public class SecurityMdcFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(
-            @NonNull HttpServletRequest request,
-            @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain
+            @NonNull final HttpServletRequest request,
+            @NonNull final HttpServletResponse response,
+            @NonNull final FilterChain filterChain
     ) throws ServletException, IOException {
         try {
             SecurityUtils.getCurrentUserId().ifPresent(id -> MDC.put(USER_ID_MDC_KEY, id.toString()));
@@ -43,8 +43,8 @@ public class SecurityMdcFilter extends OncePerRequestFilter {
      * a reverse proxy (nginx, load balancer), the actual IP is stored in the
      * {@code X-Forwarded-For} header, not in {@code request.getRemoteAddr()}.
      */
-    private String extractClientIp(HttpServletRequest request) {
-        String xff = request.getHeader(X_FORWARDED_FOR);
+    private String extractClientIp(@NonNull final HttpServletRequest request) {
+        final String xff = request.getHeader(X_FORWARDED_FOR);
         if (xff != null && !xff.isBlank()) {
             // X-Forwarded-For may be a comma-separated list: "client, proxy1, proxy2"
             return xff.split(",")[0].trim();
