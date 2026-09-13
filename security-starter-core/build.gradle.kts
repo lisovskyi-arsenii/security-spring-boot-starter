@@ -1,55 +1,70 @@
 plugins {
-    id("java-library")
-    id("io.spring.dependency-management") version "1.1.7"
-    id("maven-publish")
-}
-
-repositories {
-    mavenCentral()
+    `java-library`
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.maven.publish.plugin)
 }
 
 dependencyManagement {
     imports {
-        mavenBom("org.springframework.boot:spring-boot-dependencies:4.1.0")
+        mavenBom(libs.spring.boot.dependencies.get().toString())
     }
 }
-
-val lombokVersion = "1.18.46"
 
 dependencies {
-    compileOnly("org.springframework.boot:spring-boot-starter-security")
-    compileOnly("org.springframework.security:spring-security-core")
-    compileOnly("org.springframework.security:spring-security-web")
-    compileOnly("org.springframework.security:spring-security-config")
-    compileOnly("org.springframework.boot:spring-boot-autoconfigure")
-    compileOnly("org.springframework.boot:spring-boot-starter-validation")
-    compileOnly("org.projectlombok:lombok:$lombokVersion")
+    compileOnly(libs.spring.boot.starter.security)
+    compileOnly(libs.spring.security.core)
+    compileOnly(libs.spring.security.web)
+    compileOnly(libs.spring.security.config)
+    compileOnly(libs.spring.boot.autoconfigure)
+    compileOnly(libs.spring.boot.starter.validation)
 
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-    annotationProcessor("org.projectlombok:lombok:$lombokVersion")
+    annotationProcessor(libs.spring.boot.configuration.processor)
+
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.assertj.core)
+    testImplementation(libs.spring.boot.starter.security)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-java {
+tasks.test {
+    useJUnitPlatform()
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-            groupId = "com.lisovskyi"
-            artifactId = "security-starter-core"
-        }
-    }
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
 
-    repositories {
-        mavenLocal()
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/Sentio1/backend-java")
-            credentials {
-                username = findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR") ?: ""
-                password = findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN") ?: ""
+    coordinates(
+        groupId = project.group.toString(),
+        artifactId = "security-starter-core",
+        version = project.version.toString()
+    )
+
+    pom {
+        name.set("Lisovskyi Security Starter Core")
+        description.set("Public API module (interfaces, annotations, properties) of the Lisovskyi security starter")
+        inceptionYear.set("2026")
+        url.set("https://github.com/lisovskyi-arsenii/security-spring-boot-starter")
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
             }
         }
+        developers {
+            developer {
+                id.set("lisovskyi-arsenii")
+                name.set("Arsenii Lisovskyi")
+            }
+        }
+        scm {
+            url.set("https://github.com/lisovskyi-arsenii/security-spring-boot-starter")
+            connection.set("scm:git:git://github.com/lisovskyi-arsenii/security-spring-boot-starter.git")
+            developerConnection.set("scm:git:ssh://git@github.com/lisovskyi-arsenii/security-spring-boot-starter.git")
+        }
     }
+}
+
+tasks.withType<GenerateModuleMetadata>().configureEach {
+    suppressedValidationErrors.add("dependencies-without-versions")
 }

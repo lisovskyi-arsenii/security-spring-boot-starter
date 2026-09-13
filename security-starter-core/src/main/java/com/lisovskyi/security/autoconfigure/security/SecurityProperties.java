@@ -1,7 +1,5 @@
 package com.lisovskyi.security.autoconfigure.security;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
@@ -9,8 +7,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-@Getter
-@Setter
 @ConfigurationProperties(prefix = "app.security")
 public class SecurityProperties {
 
@@ -47,4 +43,30 @@ public class SecurityProperties {
         }
         return new ArrayList<>(combined);
     }
+
+    public List<String> getAllowedOrigins() { return allowedOrigins; }
+
+    public void setAllowedOrigins(List<String> allowedOrigins) { this.allowedOrigins = allowedOrigins; }
+
+    public List<String> getAllowedMethods() { return allowedMethods; }
+
+    public void setAllowedMethods(List<String> allowedMethods) { this.allowedMethods = allowedMethods; }
+
+    public List<String> getAllowedHeaders() { return allowedHeaders; }
+
+    public void setAllowedHeaders(List<String> allowedHeaders) { this.allowedHeaders = allowedHeaders; }
+
+    public void setPublicPaths(List<String> publicPaths) { this.publicPaths = publicPaths; }
+
+    public boolean isIncludeDefaultPublicPaths() { return includeDefaultPublicPaths; }
+
+    public void setIncludeDefaultPublicPaths(boolean includeDefaultPublicPaths) { this.includeDefaultPublicPaths = includeDefaultPublicPaths; }
+
+    public boolean isAllowCredentials() { return allowCredentials; }
+
+    public void setAllowCredentials(boolean allowCredentials) { this.allowCredentials = allowCredentials; }
+
+    public Integer getBcryptStrength() { return bcryptStrength; }
+
+    public void setBcryptStrength(Integer bcryptStrength) { this.bcryptStrength = bcryptStrength; }
 }

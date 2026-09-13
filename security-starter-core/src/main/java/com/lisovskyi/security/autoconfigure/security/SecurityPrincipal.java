@@ -1,6 +1,6 @@
 package com.lisovskyi.security.autoconfigure.security;
 
-import lombok.NonNull;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

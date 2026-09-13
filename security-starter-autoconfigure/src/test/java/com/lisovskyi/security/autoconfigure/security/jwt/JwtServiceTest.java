@@ -1,6 +1,7 @@
 package com.lisovskyi.security.autoconfigure.security.jwt;
 
 import com.lisovskyi.security.autoconfigure.security.SecurityPrincipal;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -62,7 +63,7 @@ class JwtServiceTest {
             }
 
             @Override
-            public String getUsername() {
+            public @NonNull String getUsername() {
                 return "user@sentio.dev";
             }
         };

@@ -3,14 +3,16 @@ package com.lisovskyi.security.autoconfigure.security.jwt;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
-import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.index.qual.NonNegative;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 
-@Slf4j
 public class InMemoryJwtBlacklistService implements JwtBlacklistService {
+
+    private static final Logger log = LoggerFactory.getLogger(InMemoryJwtBlacklistService.class);
 
     private final Cache<String, Boolean> blacklist = Caffeine.newBuilder()
             .expireAfter(new Expiry<String, Boolean>() {

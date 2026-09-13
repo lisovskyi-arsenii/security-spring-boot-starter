@@ -12,6 +12,7 @@ import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -77,7 +78,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             if (userIdStr != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 final long userId = Long.parseLong(userIdStr);
-                authenticateUser(request, jwt, userId);
+                try {
+                    authenticateUser(request, jwt, userId);
+                } catch (UsernameNotFoundException ex) {
+                    // JWT is valid but the referenced user no longer exists in the DB
+                    // (e.g. deleted account). Treat the request as unauthenticated and
+                    // let Spring Security's authorization layer decide whether the
+                    // endpoint requires auth — public paths (like /auth/register) must
+                    // not be blocked by a stale cookie.
+                    logger.warn("Security load failed: " + ex.getMessage());
+                    SecurityContextHolder.clearContext();
+                }
             }
 
             filterChain.doFilter(request, response);

@@ -4,9 +4,9 @@ import com.lisovskyi.security.autoconfigure.security.SecurityPrincipal;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Jwks;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -26,9 +26,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-@Slf4j
 public class JwtService {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
     private static final String KEY_FACTORY_ALGORITHM = "RSA";
 
     private final JwtProperties jwtProperties;
@@ -36,11 +36,11 @@ public class JwtService {
     private final PrivateKey privateKey;
     private final PrivateKey previousPrivateKey;
 
-    @Getter private final RSAPublicKey publicKey;
-    @Getter private final RSAPublicKey previousPublicKey;
+    private final RSAPublicKey publicKey;
+    private final RSAPublicKey previousPublicKey;
 
-    @Getter private final String keyId;
-    @Getter private final String previousKeyId;
+    private final String keyId;
+    private final String previousKeyId;
 
     private JwtDecoder nimbusJwtDecoder;
     private final boolean isIssuer;
@@ -97,6 +97,22 @@ public class JwtService {
             this.keyId = null;
             this.previousKeyId = null;
         }
+    }
+
+    public RSAPublicKey getPublicKey() {
+        return publicKey;
+    }
+
+    public RSAPublicKey getPreviousPublicKey() {
+        return previousPublicKey;
+    }
+
+    public String getKeyId() {
+        return keyId;
+    }
+
+    public String getPreviousKeyId() {
+        return previousKeyId;
     }
 
     public String extractSubject(final String token) {

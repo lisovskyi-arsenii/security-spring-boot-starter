@@ -1,6 +1,5 @@
 package com.lisovskyi.security.autoconfigure.security.jwt;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -9,13 +8,16 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 
-@RequiredArgsConstructor
 public class RedisJwtBlacklistService implements JwtBlacklistService {
 
     private static final String PREFIX = "jwt:blacklist:";
     private static final int BATCH_SIZE = 1000;
 
     private final StringRedisTemplate redisTemplate;
+
+    public RedisJwtBlacklistService(final StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     @Override
     public void addToBlacklist(final String jwt, long expirationTimeInMillis) {

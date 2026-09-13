@@ -3,7 +3,6 @@ package com.lisovskyi.security.autoconfigure.cookie;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -12,10 +11,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Optional;
 
-@RequiredArgsConstructor
 public class CookieService {
 
     private final CookieProperties cookieProperties;
+
+    public CookieService(final CookieProperties cookieProperties) {
+        this.cookieProperties = cookieProperties;
+    }
 
     @Value("${server.servlet.context-path:}")
     private String contextPath;

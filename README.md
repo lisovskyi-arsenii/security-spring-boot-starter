@@ -1,9 +1,9 @@
 # lisovskyi-security-starter
 
 ![Java](https://img.shields.io/badge/Java-25-orange?logo=openjdk)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0-brightgreen?logo=springboot)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen?logo=springboot)
 ![Spring Security](https://img.shields.io/badge/Spring%20Security-BOM--managed-brightgreen?logo=springsecurity)
-![Version](https://img.shields.io/badge/version-0.1.2-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-Apache%202.0-green)
 
 A production-grade Spring Boot security auto-configuration library. It ships stateless JWT authentication, CSRF protection, CORS configuration, cookie management, and a JWT token blacklist — all wired automatically, fully overridable, and split into a clean two-module architecture.
@@ -51,13 +51,12 @@ Securing a Spring Boot microservice requires wiring together many concerns: JWT 
 | Technology | Version |
 |---|---|
 | Java | 25 (minimum: 21) |
-| Spring Boot BOM | 4.1.0 |
+| Spring Boot BOM | 4.1.1 |
 | Spring Security | (BOM-managed) |
 | Spring Web | (BOM-managed) |
 | Spring Data Redis | (BOM-managed, optional) |
 | jjwt-api / jjwt-impl / jjwt-jackson | 0.13.0 |
 | Caffeine | 3.2.4 |
-| Lombok | 1.18.46 |
 | Gradle | (wrapper included) |
 
 > **Java version note:** The library is compiled with JDK 25. Consumer services must use JDK **21 or later** (the minimum LTS version compatible with Spring Boot 4.x).
@@ -109,30 +108,25 @@ lisovskyi-security-starter/
 
 - Java **21+** (compiled against JDK 25)
 - Gradle (wrapper `gradlew` / `gradlew.bat` is bundled)
-- A Spring Boot **4.1.0** consumer project with `spring-boot-starter-security` and `spring-boot-starter-web`
+- A Spring Boot **4.1.1** consumer project with `spring-boot-starter-security` and `spring-boot-starter-web`
 - (Optional) Redis for distributed JWT blacklisting
 
 ---
 
 ## Installation
 
-Build and publish all modules to the local Maven repository:
-
-```bash
-./gradlew publishToMavenLocal
-```
+Published to Maven Central via the [`com.vanniktech.maven.publish`](https://github.com/vanniktech/gradle-maven-publish-plugin) plugin — no extra repository declaration is needed beyond `mavenCentral()`. Each module (aggregator, `security-starter-core`, `security-starter-autoconfigure`) is published under its own artifact ID, all sharing the `io.github.lisovskyi-arsenii` group.
 
 ### Gradle (Kotlin DSL)
 
 ```kotlin
 // build.gradle.kts
 repositories {
-    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
-    implementation("com.lisovskyi:lisovskyi-security-starter:0.1.2")
+    implementation("io.github.lisovskyi-arsenii:lisovskyi-security-starter:1.0.0")
 }
 ```
 
@@ -140,23 +134,24 @@ dependencies {
 
 ```xml
 <!-- pom.xml -->
-<repositories>
-  <repository>
-    <id>local</id>
-    <url>file://${user.home}/.m2/repository</url>
-  </repository>
-</repositories>
-
 <dependencies>
   <dependency>
-    <groupId>com.lisovskyi</groupId>
+    <groupId>io.github.lisovskyi-arsenii</groupId>
     <artifactId>lisovskyi-security-starter</artifactId>
-    <version>0.1.2</version>
+    <version>1.0.0</version>
   </dependency>
 </dependencies>
 ```
 
-> **Note:** If you only need the public API types (interfaces, annotations, properties) without the auto-configuration, depend on `security-starter-core:0.1.2` instead.
+To build and test a change locally without waiting on a Central release, publish all modules to your local Maven repository instead:
+
+```bash
+./gradlew publishToMavenLocal
+```
+
+then add `mavenLocal()` to `repositories { }` in the consumer project.
+
+> **Note:** If you only need the public API types (interfaces, annotations, properties) without the auto-configuration, depend on `io.github.lisovskyi-arsenii:security-starter-core:1.0.0` instead.
 
 ---
 
@@ -332,7 +327,7 @@ public SecurityFilterChainCustomizer myCustomizer() {
 - **JWT signing key must be Base64-encoded** — the `app.jwt.signing-key` value must be a Base64-encoded HMAC-SHA256 key of at least 256 bits (32 bytes). An unencoded or weak key will cause an `io.jsonwebtoken.security.WeakKeyException` at startup.
 - **`JwtAuthFilter` requires `UserByIdDetailsService`** — if no bean implementing `UserByIdDetailsService` is present, the filter is not registered (guarded by `@ConditionalOnBean`). This means JWT authentication will be silently skipped. Provide the implementation to activate the filter.
 - **`SecurityFilterChainCustomizer` is single-bean** — only one customizer bean is supported. If you need multiple customizations, combine them in a single lambda or define a composite.
-- **Java version coupling** — compiled against JDK 25, targeting Spring Boot 4.1.0. If your consumer project uses an older BOM, version conflicts in Spring Security or JJWT transitive dependencies may arise.
+- **Java version coupling** — compiled against JDK 25, targeting Spring Boot 4.1.1. If your consumer project uses an older BOM, version conflicts in Spring Security or JJWT transitive dependencies may arise.
 
 ---
 
@@ -351,7 +346,7 @@ Contributions are welcome!
 1. Fork the repository and create your feature branch from `main`.
 2. Make sure the project builds and tests pass: `./gradlew build`.
 3. For security-related changes, include a brief threat-model justification in the PR description.
-4. Keep code style consistent with the existing conventions (Lombok, `@ConditionalOnMissingBean` for all beans).
+4. Keep code style consistent with the existing conventions (plain Java getters/setters, `@ConditionalOnMissingBean` for all beans).
 5. Open a pull request describing what you changed and why.
 
 ---

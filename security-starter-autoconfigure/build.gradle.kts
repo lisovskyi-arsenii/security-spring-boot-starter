@@ -1,76 +1,81 @@
 plugins {
-    id("java-library")
-    id("io.spring.dependency-management") version "1.1.7"
-    id("maven-publish")
-}
-
-repositories {
-    mavenCentral()
+    `java-library`
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.maven.publish.plugin)
 }
 
 dependencyManagement {
     imports {
-        mavenBom("org.springframework.boot:spring-boot-dependencies:4.1.0")
+        mavenBom(libs.spring.boot.dependencies.get().toString())
     }
 }
-
-val jwtVersion      = "0.13.0"
-val lombokVersion   = "1.18.46"
-val caffeineVersion = "3.2.4"
-val checkerVersion  = "4.2.1"
 
 dependencies {
     api(project(":security-starter-core"))
 
-    implementation("io.jsonwebtoken:jjwt-api:$jwtVersion")
-    implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.boot:spring-boot-starter-data-redis")
-    api("com.github.ben-manes.caffeine:caffeine:$caffeineVersion")
-    implementation("org.checkerframework:checker-qual:$checkerVersion")
-    implementation("org.springframework.security:spring-security-oauth2-jose")
+    implementation(libs.jjwt.api)
+    implementation(libs.spring.boot.starter.validation)
+    implementation(libs.spring.boot.starter.data.redis)
+    api(libs.caffeine)
+    implementation(libs.checker.qual)
+    implementation(libs.spring.security.oauth2.jose)
 
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:$jwtVersion")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:$jwtVersion")
+    runtimeOnly(libs.jjwt.impl)
+    runtimeOnly(libs.jjwt.jackson)
 
-    compileOnly("org.springframework.boot:spring-boot-autoconfigure")
-    compileOnly("org.springframework.boot:spring-boot-starter-security")
-    compileOnly("org.springframework.boot:spring-boot-starter-web")
-    compileOnly("org.projectlombok:lombok:$lombokVersion")
+    compileOnly(libs.spring.boot.autoconfigure)
+    compileOnly(libs.spring.boot.starter.security)
+    compileOnly(libs.spring.boot.starter.web)
 
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-    annotationProcessor("org.projectlombok:lombok:$lombokVersion")
+    annotationProcessor(libs.spring.boot.configuration.processor)
 
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("org.assertj:assertj-core")
-    testImplementation("org.springframework.boot:spring-boot-starter-security")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.assertj.core)
+    testImplementation(libs.spring.boot.starter.security)
+    testImplementation(libs.spring.boot.starter.web)
+    testImplementation(libs.spring.test)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.test {
     useJUnitPlatform()
 }
 
-java {
-}
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-            groupId = "com.lisovskyi"
-            artifactId = "security-starter-autoconfigure"
-        }
-    }
+    coordinates(
+        groupId = project.group.toString(),
+        artifactId = "security-starter-autoconfigure",
+        version = project.version.toString()
+    )
 
-    repositories {
-        mavenLocal()
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/Sentio1/backend-java")
-            credentials {
-                username = findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR") ?: ""
-                password = findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN") ?: ""
+    pom {
+        name.set("Lisovskyi Security Starter Autoconfigure")
+        description.set("Auto-configuration module (JWT, CSRF, CORS, cookies, token blacklist) of the Lisovskyi security starter")
+        inceptionYear.set("2026")
+        url.set("https://github.com/lisovskyi-arsenii/security-spring-boot-starter")
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
             }
         }
+        developers {
+            developer {
+                id.set("lisovskyi-arsenii")
+                name.set("Arsenii Lisovskyi")
+            }
+        }
+        scm {
+            url.set("https://github.com/lisovskyi-arsenii/security-spring-boot-starter")
+            connection.set("scm:git:git://github.com/lisovskyi-arsenii/security-spring-boot-starter.git")
+            developerConnection.set("scm:git:ssh://git@github.com/lisovskyi-arsenii/security-spring-boot-starter.git")
+        }
     }
+}
+
+tasks.withType<GenerateModuleMetadata>().configureEach {
+    suppressedValidationErrors.add("dependencies-without-versions")
 }
