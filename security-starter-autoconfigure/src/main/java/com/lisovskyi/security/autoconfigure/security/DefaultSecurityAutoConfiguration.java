@@ -72,7 +72,6 @@ public class DefaultSecurityAutoConfiguration {
         http
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
-                        .xssProtection(HeadersConfigurer.XXssConfig::disable)
                         .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
                         .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
                 )
