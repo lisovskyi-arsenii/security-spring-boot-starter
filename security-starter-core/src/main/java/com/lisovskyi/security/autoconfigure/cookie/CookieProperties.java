@@ -9,7 +9,7 @@ public class CookieProperties {
     private String refreshTokenName = "refresh_token";
 
     private String accessTokenPath = "/";
-    private String refreshTokenPath = "/auth/refresh";
+    private String refreshTokenPath = "/auth";
 
     private long accessTokenMaxAge = 900; // 15 minutes in seconds
     private long refreshTokenMaxAge = 604800; // 7 days in seconds
