@@ -39,6 +39,7 @@ public class SecurityAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty("app.jwt.private-key")
     public JwksController jwksController(final JwtService jwtService) {
         return new JwksController(jwtService);
     }

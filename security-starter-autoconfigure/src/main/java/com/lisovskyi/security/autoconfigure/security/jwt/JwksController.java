@@ -3,7 +3,6 @@ package com.lisovskyi.security.autoconfigure.security.jwt;
 import io.jsonwebtoken.security.JwkSetBuilder;
 import io.jsonwebtoken.security.Jwks;
 import io.jsonwebtoken.security.RsaPublicJwk;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,8 +11,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Duration;
 import java.util.Map;
 
+/**
+ * Реєструється лише коли є приватний ключ (app.jwt.private-key) - див.
+ * {@code @ConditionalOnProperty} на {@code SecurityAutoConfiguration#jwksController()},
+ * не тут: клас конструюється вручну через {@code new}, тому class-level
+ * {@code @Conditional} на ньому самому Spring ніколи не оцінює.
+ */
 @RestController
-@ConditionalOnProperty("app.jwt.private-key")
 public class JwksController {
 
     private static final Duration CACHE_MAX_AGE = Duration.ofMinutes(15);
