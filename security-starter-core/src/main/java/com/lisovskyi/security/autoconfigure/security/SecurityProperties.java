@@ -1,6 +1,9 @@
 package com.lisovskyi.security.autoconfigure.security;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -8,6 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 @ConfigurationProperties(prefix = "app.security")
+@Validated
 public class SecurityProperties {
 
     private static final List<String> DEFAULT_PUBLIC_PATHS = List.of(
@@ -28,9 +32,11 @@ public class SecurityProperties {
     
     /**
      * Strength (log rounds) to use for BCryptPasswordEncoder.
-     * If not set or set to -1, the default value (10) will be used.
+     * If not set, the default value (10) will be used.
      * Must be between 4 and 31.
      */
+    @Min(4)
+    @Max(31)
     private Integer bcryptStrength;
 
     public List<String> getPublicPaths() {

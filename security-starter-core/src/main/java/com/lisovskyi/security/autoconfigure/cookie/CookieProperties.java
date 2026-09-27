@@ -1,9 +1,15 @@
 package com.lisovskyi.security.autoconfigure.cookie;
 
+import jakarta.validation.constraints.Pattern;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "app.cookie")
+@Validated
 public class CookieProperties {
+
+    private static final String SAME_SITE_PATTERN = "(?i)Strict|Lax|None";
+    private static final String SAME_SITE_MESSAGE = "must be one of: Strict, Lax, None";
 
     private String accessTokenName = "access_token";
     private String refreshTokenName = "refresh_token";
@@ -15,6 +21,8 @@ public class CookieProperties {
     private long refreshTokenMaxAge = 604800; // 7 days in seconds
 
     private String domain;
+
+    @Pattern(regexp = SAME_SITE_PATTERN, message = SAME_SITE_MESSAGE)
     private String sameSite = "Strict";
 
     private boolean secure = true;
@@ -24,6 +32,8 @@ public class CookieProperties {
     private String csrfCookiePath = "/";
     private String csrfCookieName = "XSRF-TOKEN";
     private String csrfCookieDomain;
+
+    @Pattern(regexp = SAME_SITE_PATTERN, message = SAME_SITE_MESSAGE)
     private String csrfSameSite = "Lax";
 
     public String getAccessTokenName() { return accessTokenName; }

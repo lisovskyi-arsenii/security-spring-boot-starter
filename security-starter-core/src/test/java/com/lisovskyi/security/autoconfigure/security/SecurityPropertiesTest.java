@@ -1,12 +1,18 @@
 package com.lisovskyi.security.autoconfigure.security;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SecurityPropertiesTest {
+
+    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     @Test
     void includesDefaultPublicPathsByDefault() {
@@ -60,5 +66,43 @@ class SecurityPropertiesTest {
         assertThat(properties.getAllowedMethods()).contains("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
         assertThat(properties.isAllowCredentials()).isFalse();
         assertThat(properties.getBcryptStrength()).isNull();
+    }
+
+    @Test
+    void acceptsANullBcryptStrength() {
+        SecurityProperties properties = new SecurityProperties();
+
+        assertThat(validator.validate(properties)).isEmpty();
+    }
+
+    @Test
+    void acceptsBcryptStrengthAtTheBoundaries() {
+        SecurityProperties properties = new SecurityProperties();
+
+        properties.setBcryptStrength(4);
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setBcryptStrength(31);
+        assertThat(validator.validate(properties)).isEmpty();
+    }
+
+    @Test
+    void rejectsABcryptStrengthBelowTheMinimum() {
+        SecurityProperties properties = new SecurityProperties();
+        properties.setBcryptStrength(3);
+
+        Set<ConstraintViolation<SecurityProperties>> violations = validator.validate(properties);
+
+        assertThat(violations).anySatisfy(v -> assertThat(v.getPropertyPath().toString()).isEqualTo("bcryptStrength"));
+    }
+
+    @Test
+    void rejectsABcryptStrengthAboveTheMaximum() {
+        SecurityProperties properties = new SecurityProperties();
+        properties.setBcryptStrength(32);
+
+        Set<ConstraintViolation<SecurityProperties>> violations = validator.validate(properties);
+
+        assertThat(violations).anySatisfy(v -> assertThat(v.getPropertyPath().toString()).isEqualTo("bcryptStrength"));
     }
 }

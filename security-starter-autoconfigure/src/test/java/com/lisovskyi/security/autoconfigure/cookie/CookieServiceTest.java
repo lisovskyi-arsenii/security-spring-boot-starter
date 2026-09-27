@@ -41,6 +41,49 @@ class CookieServiceTest {
     }
 
     @Test
+    void setAccessTokenCookieOmitsDomainByDefault() {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        cookieService.setAccessTokenCookie(response, "token-value");
+
+        String header = response.getHeader("Set-Cookie");
+        assertThat(header).doesNotContain("Domain=");
+    }
+
+    @Test
+    void setAccessTokenCookieIncludesDomainWhenConfigured() {
+        properties.setDomain("example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        cookieService.setAccessTokenCookie(response, "token-value");
+
+        String header = response.getHeader("Set-Cookie");
+        assertThat(header).contains("Domain=example.com");
+    }
+
+    @Test
+    void setAccessTokenCookieIgnoresABlankDomain() {
+        properties.setDomain("   ");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        cookieService.setAccessTokenCookie(response, "token-value");
+
+        String header = response.getHeader("Set-Cookie");
+        assertThat(header).doesNotContain("Domain=");
+    }
+
+    @Test
+    void setAccessTokenCookieOmitsHttpOnlyWhenDisabled() {
+        properties.setHttpOnly(false);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        cookieService.setAccessTokenCookie(response, "token-value");
+
+        String header = response.getHeader("Set-Cookie");
+        assertThat(header).doesNotContain("HttpOnly");
+    }
+
+    @Test
     void clearAccessTokenCookieSetsAnEmptyValueAndZeroMaxAge() {
         MockHttpServletResponse response = new MockHttpServletResponse();
 

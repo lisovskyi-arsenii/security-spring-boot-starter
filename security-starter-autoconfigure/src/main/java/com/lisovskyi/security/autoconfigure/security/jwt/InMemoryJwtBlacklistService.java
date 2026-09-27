@@ -14,7 +14,10 @@ public class InMemoryJwtBlacklistService implements JwtBlacklistService {
 
     private static final Logger log = LoggerFactory.getLogger(InMemoryJwtBlacklistService.class);
 
+    private static final long MAX_ENTRIES = 100_000;
+
     private final Cache<String, Boolean> blacklist = Caffeine.newBuilder()
+            .maximumSize(MAX_ENTRIES)
             .expireAfter(new Expiry<String, Boolean>() {
                 @Override
                 public long expireAfterCreate(@NonNull String key, @NonNull Boolean value, long currentTime) {

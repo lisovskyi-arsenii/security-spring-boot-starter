@@ -3,39 +3,33 @@ package com.lisovskyi.security.autoconfigure;
 import com.lisovskyi.security.autoconfigure.cookie.CookieProperties;
 import com.lisovskyi.security.autoconfigure.cookie.CsrfCookieFilter;
 import com.lisovskyi.security.autoconfigure.security.DefaultSecurityAutoConfiguration;
+import com.lisovskyi.security.autoconfigure.security.SecurityMdcFilter;
 import com.lisovskyi.security.autoconfigure.security.SecurityProperties;
 import com.lisovskyi.security.autoconfigure.security.UserByIdDetailsService;
 import com.lisovskyi.security.autoconfigure.security.jwt.*;
 import com.lisovskyi.security.autoconfigure.cookie.CookieService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.*;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
 /**
- * {@code @AutoConfigureAfter(DataRedisAutoConfiguration.class)}: this class is
- * a plain {@code @Configuration} (registered via
- * {@code AutoConfiguration.imports}, not annotated {@code @AutoConfiguration}),
- * so without an explicit ordering constraint its {@code @Bean} methods can be
- * evaluated before Spring Boot's own redis autoconfiguration runs. When that
- * happens, {@code redisJwtBlacklistService}'s {@code @ConditionalOnBean(StringRedisTemplate.class)}
- * sees no candidate yet - even though {@code DataRedisAutoConfiguration} goes on
- * to create one moments later - and the app silently falls back to
- * {@link com.lisovskyi.security.autoconfigure.security.jwt.InMemoryJwtBlacklistService}
- * with a live Redis instance sitting right there unused.
+ * Redis/in-memory {@code JwtBlacklistService} selection lives in
+ * {@link JwtBlacklistAutoConfiguration}, not here - see its Javadoc for why that
+ * split matters for {@code @AutoConfigureAfter} ordering.
  */
 @Configuration
 @EnableConfigurationProperties({CookieProperties.class, JwtProperties.class, SecurityProperties.class})
 @Import({DefaultSecurityAutoConfiguration.class})
 @ConditionalOnProperty(prefix = "app.security", name = "enabled", havingValue = "true", matchIfMissing = true)
-@AutoConfigureAfter(DataRedisAutoConfiguration.class)
 public class SecurityAutoConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityAutoConfiguration.class);
 
     @Bean
     @ConditionalOnMissingBean
@@ -62,21 +56,6 @@ public class SecurityAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnClass(StringRedisTemplate.class)
-    @ConditionalOnBean(StringRedisTemplate.class)
-    @ConditionalOnSingleCandidate(StringRedisTemplate.class)
-    @ConditionalOnMissingBean(JwtBlacklistService.class)
-    public JwtBlacklistService redisJwtBlacklistService(final StringRedisTemplate redisTemplate) {
-        return new RedisJwtBlacklistService(redisTemplate);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(JwtBlacklistService.class)
-    public JwtBlacklistService inMemoryJwtBlacklistService() {
-        return new InMemoryJwtBlacklistService();
-    }
-
-    @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(UserByIdDetailsService.class)
     public JwtAuthFilter jwtAuthFilter(
@@ -89,9 +68,34 @@ public class SecurityAutoConfiguration {
         return new JwtAuthFilter(jwtService, cookieService, userDetailsService, jwtBlacklistService, handlerExceptionResolver);
     }
 
+    /**
+     * Exists purely to log a warning: with no {@link UserByIdDetailsService} bean,
+     * {@code jwtAuthFilter} above is never created (its {@code @ConditionalOnBean}
+     * fails), so JWT authentication is silently skipped and every request reaches
+     * {@code anyRequest().authenticated()} unauthenticated.
+     */
+    @Bean
+    @ConditionalOnMissingBean(UserByIdDetailsService.class)
+    public JwtAuthDisabledNotice jwtAuthDisabledNotice() {
+        log.warn("No UserByIdDetailsService bean found - JwtAuthFilter will not be registered. "
+                + "JWT authentication is disabled; every request will be treated as unauthenticated "
+                + "unless another mechanism populates the SecurityContext.");
+        return new JwtAuthDisabledNotice();
+    }
+
+    /** Marker type for {@link #jwtAuthDisabledNotice()} - carries no state or behaviour. */
+    public static final class JwtAuthDisabledNotice {
+    }
+
     @Bean
     @ConditionalOnMissingBean
     public CsrfCookieFilter csrfCookieFilter() {
         return new CsrfCookieFilter();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SecurityMdcFilter securityMdcFilter() {
+        return new SecurityMdcFilter();
     }
 }

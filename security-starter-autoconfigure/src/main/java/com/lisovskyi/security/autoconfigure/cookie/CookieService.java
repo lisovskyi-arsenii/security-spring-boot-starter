@@ -83,15 +83,18 @@ public class CookieService {
             long maxAge,
             @NonNull final String path
     ) {
-        ResponseCookie cookie = ResponseCookie.from(name, value)
-                .httpOnly(true)
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
+                .httpOnly(cookieProperties.isHttpOnly())
                 .secure(cookieProperties.isSecure())
                 .sameSite(cookieProperties.getSameSite())
                 .path(path)
-                .maxAge(maxAge)
-                .build();
+                .maxAge(maxAge);
 
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        if (cookieProperties.getDomain() != null && !cookieProperties.getDomain().isBlank()) {
+            builder.domain(cookieProperties.getDomain());
+        }
+
+        response.addHeader(HttpHeaders.SET_COOKIE, builder.build().toString());
     }
 
     private String buildFullPath(String partialPath) {

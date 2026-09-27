@@ -159,12 +159,25 @@ then add `mavenLocal()` to `repositories { }` in the consumer project.
 
 ### Required
 
+JWT tokens are signed with **RS256** (asymmetric) — there is no HS256/symmetric
+signing-key option. Provide exactly one of the three key sources below:
+
 ```yaml
 # application.yml
 app:
   jwt:
-    signing-key: "<your-base64-encoded-HS256-key>"  # REQUIRED — no default
+    # Issuer mode — this service signs tokens and can serve /.well-known/jwks.json
+    private-key: "<base64-encoded PKCS8 RSA private key>"
+
+    # OR validator-only mode — this service only verifies tokens signed elsewhere
+    # public-key: "<base64-encoded X.509 RSA public key>"
+
+    # OR validator-only mode — fetches signing keys from a remote JWKS endpoint
+    # jwks-uri: "https://issuer.example.com/.well-known/jwks.json"
 ```
+
+Providing more than one (or none) of `private-key` / `public-key` / `jwks-uri` fails
+startup with `IllegalStateException`.
 
 ### Full reference
 
@@ -189,16 +202,22 @@ app:
       - "/actuator/health"
 
   jwt:
-    signing-key: "<base64-encoded-key>"    # REQUIRED
+    private-key:                           # base64 PKCS8 RSA private key — issuer mode (see above)
+    previous-private-key:                  # optional — previous key during rotation, still accepted for validating old tokens
+    public-key:                            # base64 X.509 RSA public key — validator-only mode
+    previous-public-key:                   # optional — previous key during rotation
+    jwks-uri:                              # remote JWKS endpoint — validator-only mode
     access-token-expiration: 900000        # default: 900000 ms (15 minutes)
-    refresh-token-expiration: 604800000    # default: 604800000 ms (7 days)
-    issuer: "lisovskyi-security-service"   # default
+    refresh-token-expiration: 604800000    # default: 604800000 ms (7 days) — NOT currently read by JwtService;
+                                            # reserved for consumers building their own JWT-based refresh flow.
+                                            # For refresh tokens today, use OpaqueTokenService (see Usage Examples).
+    issuer: "lisovskyi-security-service"   # default — override this per deployment
 
   cookie:
     access-token-name: "access_token"      # default
     refresh-token-name: "refresh_token"    # default
     access-token-path: "/"                 # default
-    refresh-token-path: "/auth/refresh"    # default
+    refresh-token-path: "/auth"            # default
     access-token-max-age: 900              # default: seconds
     refresh-token-max-age: 604800          # default: seconds
     domain:                                # optional — leave blank for current domain
@@ -219,13 +238,13 @@ Your `User` entity (or a dedicated `UserDetailsImpl`) must implement `SecurityPr
 @Entity
 public class User implements SecurityPrincipal {
 
-    private UUID id;
+    private Long id;
     private String email;
     private String password;
     private String role;      // e.g. "ADMIN" or "ROLE_USER"
 
     @Override
-    public Object getId() { return id; }
+    public Long getId() { return id; }
 
     @Override
     public String getRole() { return role; }
@@ -238,6 +257,9 @@ public class User implements SecurityPrincipal {
 }
 ```
 
+> `getId()` returns `Long` — `JwtAuthFilter` parses the JWT subject claim with
+> `Long.parseLong(...)`. A `UUID` or `String` primary key is not supported today.
+
 ### 2. Implement `UserByIdDetailsService`
 
 ```java
@@ -248,14 +270,19 @@ public class UserService implements UserByIdDetailsService {
     private final UserRepository userRepository;
 
     @Override
-    public SecurityPrincipal loadUserById(String userId) {
-        return userRepository.findById(UUID.fromString(userId))
+    public SecurityPrincipal loadUserById(Long userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
     }
 }
 ```
 
 ### 3. Issue tokens on login
+
+`JwtService` only issues the short-lived access token. For the long-lived refresh
+token, use `OpaqueTokenService`: it hands you a random token to give the client and
+a SHA-256 hash to persist yourself — nothing about it is JWT-shaped, so there's no
+`generateRefreshToken()` method to call.
 
 ```java
 @RestController
@@ -265,14 +292,19 @@ public class AuthController {
 
     private final JwtService jwtService;
     private final CookieService cookieService;
+    private final OpaqueTokenService opaqueTokenService;
+    private final RefreshTokenRepository refreshTokenRepository; // your own persistence
 
     @PostMapping("/login")
     public ResponseEntity<Void> login(@RequestBody LoginRequest request,
                                       HttpServletResponse response) {
         User user = userService.authenticate(request);
 
-        cookieService.setAccessTokenCookie(response, jwtService.generateToken(user));
-        cookieService.setRefreshTokenCookie(response, jwtService.generateRefreshToken(user));
+        cookieService.setAccessTokenCookie(response, jwtService.generateToken(user, Map.of()));
+
+        String refreshToken = opaqueTokenService.generate();
+        refreshTokenRepository.save(user.getId(), opaqueTokenService.hash(refreshToken));
+        cookieService.setRefreshTokenCookie(response, refreshToken);
 
         return ResponseEntity.ok().build();
     }
@@ -296,10 +328,12 @@ public ResponseEntity<Void> logout(@CurrentUser User user,
                                    HttpServletRequest request,
                                    HttpServletResponse response,
                                    JwtBlacklistService blacklistService,
-                                   JwtService jwtService) {
-    String token = extractTokenFromRequest(request);
-    Date expiration = jwtService.extractExpiration(token);
-    blacklistService.addToBlacklist(token, expiration.getTime());
+                                   JwtService jwtService,
+                                   CookieService cookieService) {
+    cookieService.getAccessTokenCookie(request).ifPresent(token -> {
+        Instant expiration = jwtService.extractExpiration(token);
+        blacklistService.addToBlacklist(token, expiration.toEpochMilli());
+    });
 
     cookieService.clearAccessTokenCookie(response);
     cookieService.clearRefreshTokenCookie(response);
@@ -323,10 +357,10 @@ public SecurityFilterChainCustomizer myCustomizer() {
 
 ## Known Limitations
 
-- **`InMemoryJwtBlacklistService` is not distributed** — it stores revoked tokens in a local JVM heap. In a multi-instance deployment, a token revoked on instance A is still accepted on instance B. Always provision Redis in production microservice environments (a `StringRedisTemplate` bean is all that is required for the Redis implementation to activate automatically).
-- **JWT signing key must be Base64-encoded** — the `app.jwt.signing-key` value must be a Base64-encoded HMAC-SHA256 key of at least 256 bits (32 bytes). An unencoded or weak key will cause an `io.jsonwebtoken.security.WeakKeyException` at startup.
-- **`JwtAuthFilter` requires `UserByIdDetailsService`** — if no bean implementing `UserByIdDetailsService` is present, the filter is not registered (guarded by `@ConditionalOnBean`). This means JWT authentication will be silently skipped. Provide the implementation to activate the filter.
-- **`SecurityFilterChainCustomizer` is single-bean** — only one customizer bean is supported. If you need multiple customizations, combine them in a single lambda or define a composite.
+- **`InMemoryJwtBlacklistService` is not distributed** — it stores revoked tokens in a local JVM heap, capped at 100,000 entries (oldest evicted first under pressure). In a multi-instance deployment, a token revoked on instance A is still accepted on instance B. Always provision Redis in production microservice environments (a `StringRedisTemplate` bean is all that is required for the Redis implementation to activate automatically).
+- **JWT keys must be Base64-encoded RSA, not a symmetric secret** — `app.jwt.private-key` is a Base64-encoded PKCS8 RSA private key; `app.jwt.public-key` a Base64-encoded X.509 RSA public key. There is no HS256/symmetric option. A malformed key fails startup with `IllegalStateException`.
+- **`JwtAuthFilter` requires `UserByIdDetailsService`** — if no bean implementing `UserByIdDetailsService` is present, the filter is not registered (guarded by `@ConditionalOnBean`), and every request reaches the app unauthenticated. A `WARN` log is emitted at startup in this case; provide the implementation to activate the filter.
+- **`SecurityPrincipal.getId()` is `Long`-only** — `JwtAuthFilter` parses the JWT subject with `Long.parseLong(...)`. A `UUID` or `String` primary key will throw `NumberFormatException` on every authenticated request.
 - **Java version coupling** — compiled against JDK 25, targeting Spring Boot 4.1.1. If your consumer project uses an older BOM, version conflicts in Spring Security or JJWT transitive dependencies may arise.
 
 ---

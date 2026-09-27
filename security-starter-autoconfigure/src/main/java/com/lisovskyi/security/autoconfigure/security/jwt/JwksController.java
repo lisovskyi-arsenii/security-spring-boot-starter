@@ -3,13 +3,20 @@ package com.lisovskyi.security.autoconfigure.security.jwt;
 import io.jsonwebtoken.security.JwkSetBuilder;
 import io.jsonwebtoken.security.Jwks;
 import io.jsonwebtoken.security.RsaPublicJwk;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.util.Map;
 
 @RestController
+@ConditionalOnProperty("app.jwt.private-key")
 public class JwksController {
+
+    private static final Duration CACHE_MAX_AGE = Duration.ofMinutes(15);
 
     private final JwtService jwtService;
 
@@ -18,7 +25,7 @@ public class JwksController {
     }
 
     @GetMapping("/.well-known/jwks.json")
-    public Map<String, Object> jwks() {
+    public ResponseEntity<Map<String, Object>> jwks() {
         RsaPublicJwk jwk = Jwks.builder()
                 .key(jwtService.getPublicKey())
                 .id(jwtService.getKeyId())
@@ -34,6 +41,8 @@ public class JwksController {
             jwkSetBuilder.add(previousJwk);
         }
 
-        return jwkSetBuilder.build();
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(CACHE_MAX_AGE).cachePublic())
+                .body(jwkSetBuilder.build());
     }
 }

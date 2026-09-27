@@ -46,6 +46,7 @@ public class DefaultSecurityAutoConfiguration {
     private final SecurityProperties securityProperties;
     private final JwtAuthFilter jwtAuthFilter;
     private final CsrfCookieFilter csrfCookieFilter;
+    private final SecurityMdcFilter securityMdcFilter;
     private final List<SecurityFilterChainCustomizer> chainCustomizers;
 
     private final HandlerExceptionResolver handlerExceptionResolver;
@@ -55,12 +56,14 @@ public class DefaultSecurityAutoConfiguration {
             final SecurityProperties securityProperties,
             final ObjectProvider<JwtAuthFilter> jwtAuthFilterProvider,
             final ObjectProvider<CsrfCookieFilter> csrfCookieFilterProvider,
+            final ObjectProvider<SecurityMdcFilter> securityMdcFilterProvider,
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver handlerExceptionResolver,
             final List<SecurityFilterChainCustomizer> chainCustomizers,
             final CookieProperties cookieProperties) {
         this.securityProperties = securityProperties;
         this.jwtAuthFilter = jwtAuthFilterProvider.getIfAvailable();
         this.csrfCookieFilter = csrfCookieFilterProvider.getIfAvailable();
+        this.securityMdcFilter = securityMdcFilterProvider.getIfAvailable();
         this.handlerExceptionResolver = handlerExceptionResolver;
         this.chainCustomizers = chainCustomizers != null ? chainCustomizers : List.of();
         this.cookieProperties = cookieProperties;
@@ -111,8 +114,11 @@ public class DefaultSecurityAutoConfiguration {
                     jwtAuthFilter,
                     UsernamePasswordAuthenticationFilter.class
             );
+        }
+
+        if (securityMdcFilter != null) {
             http.addFilterAfter(
-                    new SecurityMdcFilter(),
+                    securityMdcFilter,
                     JwtAuthFilter.class
             );
         }
@@ -201,10 +207,7 @@ public class DefaultSecurityAutoConfiguration {
     @ConditionalOnMissingBean
     public PasswordEncoder passwordEncoder() {
         Integer strength = securityProperties.getBcryptStrength();
-        if (strength != null && strength >= 4 && strength <= 31) {
-            return new BCryptPasswordEncoder(strength);
-        }
-        return new BCryptPasswordEncoder();
+        return strength != null ? new BCryptPasswordEncoder(strength) : new BCryptPasswordEncoder();
     }
 
     @Bean

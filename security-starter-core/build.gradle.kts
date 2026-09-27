@@ -23,6 +23,7 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
     testImplementation(libs.spring.boot.starter.security)
+    testImplementation(libs.spring.boot.starter.validation)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 

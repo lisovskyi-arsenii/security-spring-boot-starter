@@ -90,16 +90,9 @@ public class JwtService {
             this.previousKeyId = null;
             this.jwtParser = null;
             this.nimbusJwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwtProperties.getJwksUri()).build();
-
         } else {
-            this.isIssuer = false;
-            this.privateKey = null;
-            this.publicKey = null;
-            this.previousPublicKey = null;
-            this.keyId = null;
-            this.previousKeyId = null;
-            this.jwtParser = null;
-            this.nimbusJwtDecoder = null;
+            // unreachable - validateConfiguration() вище вже гарантує рівно одне з трьох
+            throw new IllegalStateException("Unreachable: validateConfiguration() invariant violated");
         }
     }
 

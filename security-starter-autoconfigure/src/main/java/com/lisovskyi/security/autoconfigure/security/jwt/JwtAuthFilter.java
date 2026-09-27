@@ -3,7 +3,6 @@ package com.lisovskyi.security.autoconfigure.security.jwt;
 import com.lisovskyi.security.autoconfigure.cookie.CookieService;
 import com.lisovskyi.security.autoconfigure.security.UserByIdDetailsService;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.NonNull;
@@ -17,8 +16,6 @@ import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
-
-import java.io.IOException;
 
 public class JwtAuthFilter extends OncePerRequestFilter {
 
@@ -51,7 +48,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull final HttpServletRequest request,
             @NonNull final HttpServletResponse response,
             @NonNull final FilterChain filterChain
-    ) throws ServletException, IOException {
+    ) {
         try {
             String jwt = extractTokenFromHeader(request);
 
