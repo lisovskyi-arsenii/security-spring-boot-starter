@@ -9,6 +9,7 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -16,6 +17,9 @@ import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
+
+import java.util.Collection;
+import java.util.Map;
 
 public class JwtAuthFilter extends OncePerRequestFilter {
 
@@ -28,6 +32,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtBlacklistService jwtBlacklistService;
 
     private final HandlerExceptionResolver exceptionResolver;
+    private final boolean rolesFromClaims;
 
     public JwtAuthFilter(
             @NonNull final JwtService jwtService,
@@ -36,11 +41,27 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull final JwtBlacklistService jwtBlacklistService,
             @NonNull @Qualifier("handlerExceptionResolver") final HandlerExceptionResolver handlerExceptionResolver
     ) {
+        this(jwtService, cookieService, userDetailsService, jwtBlacklistService, handlerExceptionResolver, false);
+    }
+
+    /**
+     * @param rolesFromClaims also grant {@code ROLE_<role>} for every entry of the token's
+     *                        {@code roles} claim (see {@code app.security.roles-from-claims})
+     */
+    public JwtAuthFilter(
+            @NonNull final JwtService jwtService,
+            @NonNull final CookieService cookieService,
+            @NonNull final UserByIdDetailsService userDetailsService,
+            @NonNull final JwtBlacklistService jwtBlacklistService,
+            @NonNull @Qualifier("handlerExceptionResolver") final HandlerExceptionResolver handlerExceptionResolver,
+            final boolean rolesFromClaims
+    ) {
         this.jwtService = jwtService;
         this.cookieService = cookieService;
         this.userDetailsService = userDetailsService;
         this.jwtBlacklistService = jwtBlacklistService;
         this.exceptionResolver = handlerExceptionResolver;
+        this.rolesFromClaims = rolesFromClaims;
     }
 
     @Override
@@ -105,14 +126,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private void authenticateUser(@NonNull final HttpServletRequest request, final String jwt, final Long userId) {
         final UserDetails userDetails = userDetailsService.loadUserById(userId);
+        final Map<String, Object> claims = jwtService.extractClaims(jwt);
+
+        // The principal only knows what loadUserById(userId) could tell it. A service without a
+        // user table has no role to give it, so optionally take the roles from the token itself.
+        Collection<? extends GrantedAuthority> authorities = userDetails.getAuthorities();
+        if (rolesFromClaims) {
+            authorities = JwtRoleAuthorities.merge(authorities, JwtRoleAuthorities.fromClaims(claims));
+        }
 
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                 userDetails,
                 null,
-                userDetails.getAuthorities()
+                authorities
         );
         WebAuthenticationDetails webDetails = new WebAuthenticationDetailsSource().buildDetails(request);
-        authToken.setDetails(new JwtAuthenticationDetails(webDetails, jwtService.extractClaims(jwt)));
+        authToken.setDetails(new JwtAuthenticationDetails(webDetails, claims));
         SecurityContextHolder.getContext().setAuthentication(authToken);
     }
 }

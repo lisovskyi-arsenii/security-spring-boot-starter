@@ -64,9 +64,12 @@ public class SecurityAutoConfiguration {
             final CookieService cookieService,
             final UserByIdDetailsService userDetailsService,
             final JwtBlacklistService jwtBlacklistService,
-            @Qualifier("handlerExceptionResolver") final HandlerExceptionResolver handlerExceptionResolver
+            @Qualifier("handlerExceptionResolver") final HandlerExceptionResolver handlerExceptionResolver,
+            final SecurityProperties securityProperties
     ) {
-        return new JwtAuthFilter(jwtService, cookieService, userDetailsService, jwtBlacklistService, handlerExceptionResolver);
+        return new JwtAuthFilter(
+                jwtService, cookieService, userDetailsService, jwtBlacklistService, handlerExceptionResolver,
+                securityProperties.isRolesFromClaims());
     }
 
     /**

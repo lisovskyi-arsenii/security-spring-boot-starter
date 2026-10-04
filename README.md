@@ -197,6 +197,7 @@ app:
     allowed-headers:
       - "*"
     allow-credentials: false               # default: false
+    roles-from-claims: false               # default: false — also grant ROLE_<role> for each entry of the JWT's `roles` claim (see below)
     include-default-public-paths: true     # default: true — includes /auth/**, /error/**, /swagger-ui/**, /v3/api-docs/**
     public-paths:                          # additional public paths (merged with defaults when include-default-public-paths=true)
       - "/actuator/health"
@@ -395,3 +396,24 @@ Key points of Apache 2.0:
 - ✅ Patent grant — contributors grant users a license to any patents covering the contribution
 - ✅ Must preserve copyright and license notices
 - ✅ Changes to the source must be stated
+
+## Roles from the JWT claim (`app.security.roles-from-claims`)
+
+By default the authorities of an authenticated request come from the principal your
+`UserByIdDetailsService` returns (`SecurityPrincipal.getRole()`). That is fine when that service can
+look the user up and read a role. A service that has no user table - its principal is built from the
+user id alone - has nothing to put there, so `@PreAuthorize("hasRole('OWNER')")` could never match.
+
+Set `app.security.roles-from-claims: true` and `JwtAuthFilter` additionally grants `ROLE_<role>` for
+every entry of the token's `roles` claim, on top of the principal's own authorities:
+
+```yaml
+app:
+  security:
+    roles-from-claims: true
+```
+
+- `["OWNER", "ADMIN"]` becomes `ROLE_OWNER`, `ROLE_ADMIN`; a value that already starts with `ROLE_` is kept as is.
+- A missing claim, a claim that is not a list, and blank/null entries grant nothing (they never fail the request).
+- Off by default, so existing services behave exactly as before.
+

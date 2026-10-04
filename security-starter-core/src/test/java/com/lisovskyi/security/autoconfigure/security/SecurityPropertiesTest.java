@@ -22,6 +22,16 @@ class SecurityPropertiesTest {
     }
 
     @Test
+    void rolesFromClaimsIsOffByDefault_soExistingServicesBehaveAsBefore() {
+        SecurityProperties properties = new SecurityProperties();
+
+        assertThat(properties.isRolesFromClaims()).isFalse();
+
+        properties.setRolesFromClaims(true);
+        assertThat(properties.isRolesFromClaims()).isTrue();
+    }
+
+    @Test
     void mergesUserConfiguredPathsWithTheDefaultsWithoutDuplicates() {
         SecurityProperties properties = new SecurityProperties();
         properties.setPublicPaths(List.of("/custom/**", "/auth/**"));

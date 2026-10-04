@@ -29,6 +29,14 @@ public class SecurityProperties {
     private List<String> publicPaths = new ArrayList<>();
     private boolean includeDefaultPublicPaths = true;
     private boolean allowCredentials = false;
+
+    /**
+     * Also derive Spring Security authorities from the JWT's {@code roles} claim
+     * ({@code ROLE_<role>}), in addition to whatever {@code UserByIdDetailsService} returned.
+     * Off by default. For a service whose principal is built from the user id alone (no user
+     * table to read a role from), this is the only way {@code hasRole(...)} can ever match.
+     */
+    private boolean rolesFromClaims = false;
     
     /**
      * Strength (log rounds) to use for BCryptPasswordEncoder.
@@ -49,6 +57,10 @@ public class SecurityProperties {
         }
         return new ArrayList<>(combined);
     }
+
+    public boolean isRolesFromClaims() { return rolesFromClaims; }
+
+    public void setRolesFromClaims(boolean rolesFromClaims) { this.rolesFromClaims = rolesFromClaims; }
 
     public List<String> getAllowedOrigins() { return allowedOrigins; }
 
